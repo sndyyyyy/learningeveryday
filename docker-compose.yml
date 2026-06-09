@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: laravel-app
+    restart: unless-stopped
+    ports:
+      - "80:8000" # Memetakan Port 80 VPS ke Port 8000 di dalam Container
+    volumes:
+      - ./:/var/www/html
+    environment:
+      - APP_ENV=production
+    depends_on:
+      - db
+    networks:
+      - project-network
+
+  # Database MySQL
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - project-network
+
+networks:
+  project-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local
