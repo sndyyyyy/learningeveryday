@@ -4,58 +4,120 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mengerjakan: {{ $quiz->title }}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-      /* Kita sisakan animasi kustom ini di CSS karena lebih smooth daripada class bawaan */
+        body {
+                  font-family: 'Poppins', sans-serif;
+              }
       @keyframes popInModal { to { transform: scale(1); opacity: 1; } }
-      @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
       
       .animate-pop-in { animation: popInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-      .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+      .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
       .shake { animation: shake 0.4s ease-in-out; }
     </style>
   </head>
-  <body class="bg-gray-100 text-gray-800 flex justify-center items-center min-h-screen overflow-y-auto py-8">
+  <body class="bg-gray-100 text-gray-800 flex justify-center items-center min-h-screen overflow-y-auto py-6">
     
     <canvas id="confetti" class="fixed top-0 left-0 w-full h-full pointer-events-none z-10"></canvas>
 
     <div id="result-modal" class="fixed top-0 left-0 w-full h-full bg-black/50 hidden justify-center items-center z-50 backdrop-blur-sm transition-all duration-300">
-      <div class="bg-white p-8 rounded-2xl max-w-[450px] w-[90%] text-center shadow-2xl scale-80 opacity-0 transition-all duration-300">
+      <div class="bg-white p-6 rounded-2xl max-w-2xl w-[92%] text-center shadow-2xl scale-80 opacity-0 transition-all duration-300 flex flex-col max-h-[90vh]">
         <h3 id="modal-status" class="text-xl font-bold mb-2">Status Jawaban</h3>
         
-        <div class="bg-gray-100 border-l-4 border-indigo-600 p-4 rounded-lg text-left text-sm leading-relaxed my-4 max-h-[150px] overflow-y-auto">
-            <p id="modal-explanation" class="text-gray-600">Pembahasan...</p>
+        <div id="explanation-container" class="hidden flex-col bg-indigo-50/50 border-l-4 border-indigo-600 p-4 rounded-r-xl text-left text-xs md:text-sm leading-relaxed my-3 overflow-y-auto flex-1">
+            <div class="font-bold text-indigo-700 mb-1 flex items-center space-x-1 shrink-0">
+                <span>💡</span> <span>Materi & Pembahasan:</span>
+            </div>
+            <div class="w-full text-gray-600 break-words">
+                <p id="modal-explanation" class="leading-relaxed"></p>
+            </div>
         </div>
         
-        <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition duration-200 cursor-pointer" onclick="nextQuestion()">Next &rarr;</button>
+        <div class="flex flex-col sm:flex-row gap-2.5 mt-3 w-full">
+            <button id="btn-pelajari" class="w-full sm:w-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition duration-200 cursor-pointer text-xs md:text-sm" onclick="showExplanationContent()">
+                Pelajari Soal
+            </button>
+            <button class="w-full sm:w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition duration-200 cursor-pointer text-xs md:text-sm" onclick="nextQuestion()">
+                Next Soal &rarr;
+            </button>
+        </div>
       </div>
     </div>
 
-    <div id="app" class="bg-white w-[90%] max-w-[500px] p-8 rounded-2xl shadow-xl relative z-20 m-auto transition-all duration-300">
+    <div id="quiz-completion-modal" class="fixed top-0 left-0 w-full h-full bg-black/60 hidden justify-center items-center z-50 backdrop-blur-md transition-all duration-300">
+      <div class="bg-white p-5 md:p-6 rounded-2xl max-w-lg w-[92%] shadow-2xl scale-80 opacity-0 transition-all duration-300 flex flex-col max-h-[92vh]">
+        
+        <div class="border-b border-gray-100 pb-3 mb-3 flex justify-between items-center shrink-0">
+            <div>
+                <h3 class="text-base md:text-lg font-bold text-gray-800">Kuis Selesai! 🎉</h3>
+                <p class="text-[10px] md:text-xs text-gray-400 mt-0.5">Nilai tersimpan otomatis di database.</p>
+            </div>
+            <div class="text-right bg-emerald-50/80 p-2 px-4 rounded-xl border border-emerald-100">
+                <span class="text-[10px] text-emerald-600 font-bold block leading-none mb-1">Skor Kamu</span>
+                <span id="completion-score-badge" class="text-xl md:text-2xl font-black text-emerald-600 leading-none">0 / 100</span>
+            </div>
+        </div>
+
+        <div id="completion-review-list" class="hidden max-h-[320px] md:max-h-[380px] overflow-y-auto space-y-4 pr-1 mb-3 border-b border-gray-100 pb-3">
+            </div>
+
+        <div class="flex flex-row gap-2 w-full shrink-0">
+            <button id="btn-toggle-review" class="w-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-2 rounded-xl shadow-sm transition duration-150 cursor-pointer text-[11px] md:text-xs text-center flex items-center justify-center space-x-1" onclick="toggleFullReviewList(this)">
+                <span>👁️ Lihat Review</span>
+                <span class="transition-transform duration-150 transform inline-block text-[9px]">&#9662;</span>
+            </button>
+            <button class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-2 rounded-xl shadow-sm transition duration-150 cursor-pointer text-[11px] md:text-xs text-center flex items-center justify-center space-x-1" onclick="redirectToDashboard()">
+                <span>🚪 Keluar Dashboard</span>
+            </button>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="app" class="bg-white w-[90%] max-w-[480px] p-6 md:p-8 rounded-2xl shadow-xl relative z-20 m-auto transition-all duration-300">
       
       <div id="start-screen" class="screen hidden flex-col items-center text-center animate-fade-in">
-        <h1 class="text-2xl font-bold text-indigo-600 mb-3">{{ $quiz->title }}</h1>
-        <p class="text-gray-500 text-sm leading-relaxed mb-6">{{ $quiz->description ?? 'Uji kemampuanmu sekarang dengan kuis interaktif ini!' }}</p>
-        <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl shadow-md transition duration-200 cursor-pointer" onclick="startQuiz()">Start Quiz</button>
+        <h1 class="text-xl md:text-2xl font-bold text-indigo-600 mb-2">{{ $quiz->title }}</h1>
+        <p class="text-gray-500 text-xs md:text-sm leading-relaxed mb-5">{{ $quiz->description ?? 'Uji kemampuanmu sekarang dengan kuis interaktif ini!' }}</p>
+        <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-5 rounded-xl shadow-md transition duration-200 cursor-pointer text-sm" onclick="startQuiz()">Start Quiz</button>
+      </div>
+
+      <div id="section-transition-screen" class="screen hidden flex-col items-center justify-center text-center py-10 animate-fade-in">
+          <div class="bg-indigo-50 p-3 rounded-2xl mb-3 border border-indigo-100">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-8 h-8 text-indigo-600 animate-pulse">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.967 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.967 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.967 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+              </svg>
+          </div>
+          <p class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Mempersiapkan Bagian Ujian</p>
+          <h2 id="transition-section-name" class="text-xl font-black text-gray-800 mt-1 tracking-tight">== Loading Section ==</h2>
+          <div class="mt-4 flex space-x-1 justify-center items-center">
+              <div class="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+              <div class="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+              <div class="w-1.5 h-1.5 bg-indigo-600 rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+          </div>
       </div>
 
       <div id="quiz-screen" class="screen hidden flex-col items-center text-center animate-fade-in">
-        <div class="w-full h-2 bg-gray-200 rounded-full mb-6 overflow-hidden">
+        <div class="w-full h-1.5 bg-gray-200 rounded-full mb-4 overflow-hidden">
           <div class="h-full bg-indigo-600 w-0 transition-all duration-300 ease-out" id="progress"></div>
         </div>
         
-        <p id="question-counter" class="text-gray-400 text-xs font-semibold mb-2"></p>
-        <h2 id="question-text" class="text-lg font-bold text-gray-800 mb-6 leading-snug">Loading Question...</h2>
+        <p id="question-counter" class="text-indigo-600 text-[10px] font-bold bg-indigo-50 px-2.5 py-1 rounded-full mb-3 tracking-wide border border-indigo-100/50"></p>
+        <h2 id="question-text" class="text-base md:text-lg font-bold text-gray-800 mb-5 leading-snug">Loading Question...</h2>
         
         <div id="media-container" class="w-full"></div>
-
-        <div class="options-container w-full mt-4" id="options"></div>
+        <div class="options-container w-full mt-3" id="options"></div>
       </div>
 
       <div id="loading-screen" class="screen hidden flex-col items-center text-center animate-fade-in">
-        <h1 class="text-xl font-bold text-indigo-600 mb-2">Menghitung Skor...</h1>
-        <p class="text-gray-500 text-sm leading-relaxed">Mohon tunggu sebentar, hasil kamu sedang dikirim ke sistem database.</p>
+        <h1 class="text-lg font-bold text-indigo-600 mb-1">Menghitung Skor...</h1>
+        <p class="text-gray-500 text-xs leading-relaxed">Mohon tunggu sebentar, hasil kamu sedang dikirim ke sistem database.</p>
         
         <form id="submit-form" action="{{ route('peserta.quiz.submit', $quiz->id) }}" method="POST" class="hidden">
             @csrf
@@ -66,7 +128,6 @@
     </div>
 
     <script>
-      // Ambil data kuis dari database
       const quizData = @json($questions);
 
       let currentQuestionIndex = 0;
@@ -74,7 +135,10 @@
       let isAnswering = false;
       let pesertaAnswers = {}; 
 
-      // Setup Audio Sfx Benar/Salah bawaan referensi
+      let currentSectionId = null;
+      let currentSectionName = "";
+      let sectionQuestionCounter = 0;
+
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       function playTone(frequency, type, duration) {
         if (audioCtx.state === "suspended") audioCtx.resume();
@@ -102,22 +166,60 @@
       }
 
       function switchScreen(screenId) {
-        document.querySelectorAll(".screen").forEach((s) => s.classList.replace("flex", "hidden"));
-        document.getElementById(screenId).classList.replace("hidden", "flex");
+        document.querySelectorAll(".screen").forEach((s) => {
+            s.classList.remove("flex");
+            s.classList.add("hidden");
+        });
+        document.getElementById(screenId).classList.remove("hidden");
+        document.getElementById(screenId).classList.add("flex");
       }
 
       function startQuiz() {
-        switchScreen("quiz-screen");
-        loadQuestion();
+        checkAndHandleSectionTransition(true);
+      }
+
+      function checkAndHandleSectionTransition(isFirstStart = false) {
+          const q = quizData[currentQuestionIndex];
+          const partId = q.bank_part_id ? q.bank_part_id : 0;
+          
+          const bankName = (q.bank_part && q.bank_part.bank) ? q.bank_part.bank.bank_name : "";
+          const partName = q.bank_part ? q.bank_part.part_name : "General Test";
+          const fullSectionName = bankName ? `${bankName} - ${partName}` : partName;
+
+          if (partId !== currentSectionId) {
+              currentSectionId = partId;
+              currentSectionName = fullSectionName;
+              sectionQuestionCounter = 1;
+
+              document.getElementById("transition-section-name").innerText = `== ${currentSectionName} ==`;
+              switchScreen("section-transition-screen");
+
+              setTimeout(() => {
+                  switchScreen("quiz-screen");
+                  loadQuestion();
+              }, 3000);
+          } else {
+              if (!isFirstStart) {
+                  sectionQuestionCounter++;
+              }
+              switchScreen("quiz-screen");
+              loadQuestion();
+          }
       }
 
       function loadQuestion() {
         isAnswering = false;
         const q = quizData[currentQuestionIndex];
 
-        document.getElementById("question-text").innerText = q.question_text;
-        document.getElementById("question-counter").innerText = `Question ${currentQuestionIndex + 1} of ${quizData.length}`;
+        const currentPartId = q.bank_part_id ? q.bank_part_id : 0;
+        const totalSoalInThisSection = quizData.filter(item => {
+            const itemPartId = item.bank_part_id ? item.bank_part_id : 0;
+            return itemPartId === currentPartId;
+        }).length;
 
+        document.getElementById("question-text").innerText = q.question_text;
+        document.getElementById("question-counter").innerText = `⚡ ${currentSectionName} • Soal ${sectionQuestionCounter} dari ${totalSoalInThisSection}`;
+        
         const progress = (currentQuestionIndex / quizData.length) * 100;
         document.getElementById("progress").style.width = `${progress}%`;
 
@@ -125,30 +227,26 @@
         const mediaContainer = document.getElementById("media-container");
         
         optionsContainer.innerHTML = "";
-        mediaContainer.innerHTML = ""; // Reset media lama secara bersih
+        mediaContainer.innerHTML = ""; 
 
-        // 1. Render Gambar jika ada
         if (q.image) {
           const img = document.createElement("img");
           img.src = `/storage/${q.image}`; 
-          img.className = "w-full max-h-[200px] object-contain rounded-xl mb-4 shadow-sm border border-gray-100 animate-fade-in";
+          img.className = "w-full max-h-[180px] object-contain rounded-xl mb-3 shadow-sm border border-gray-100 animate-fade-in";
           mediaContainer.appendChild(img);
         }
 
-        // 2. Render Audio jika ada
         if (q.audio) {
           const audioPlayer = document.createElement("audio");
-          audioPlayer.src = `/storage/${q.audio}`;
+          audioPlayer.src = `{{ route('audio.stream') }}?path=${encodeURIComponent(q.audio)}`;
           audioPlayer.controls = true;
-          audioPlayer.className = "w-full mb-4 outline-none";
+          audioPlayer.className = "w-full mb-3 outline-none text-xs";
           mediaContainer.appendChild(audioPlayer);
         }
 
-        // 3. Render Pilihan Ganda (Meniru tombol native CSS dengan utilitas Tailwind)
         Object.keys(q.options).forEach((key) => {
           const btn = document.createElement("button");
-          // Class dasar tombol pilihan ganda dipasang di sini
-          btn.className = "option-btn w-full text-left bg-white text-gray-700 border-2 border-gray-200 p-4 rounded-xl mb-3 font-medium transition-all duration-200 hover:border-indigo-600 hover:bg-indigo-50 cursor-pointer text-base";
+          btn.className = "option-btn w-full text-left bg-white text-gray-700 border-2 border-gray-200 p-3.5 rounded-xl mb-2.5 font-medium transition-all duration-200 hover:border-indigo-600 hover:bg-indigo-50 cursor-pointer text-sm md:text-base";
           btn.innerHTML = `<strong class="text-indigo-600 mr-1">${key}.</strong> ${q.options[key]}`;
           btn.onclick = () => selectAnswer(key, btn);
           optionsContainer.appendChild(btn);
@@ -163,12 +261,9 @@
         const isCorrect = selectedKey === q.correct_answer;
         
         pesertaAnswers[q.id] = selectedKey;
-
-        // Ambil semua tombol opsi untuk manipulasi warna akhir
         const buttons = document.querySelectorAll(".option-btn");
 
         if (isCorrect) {
-          // Warna Sukses Hijau Tailwind (Menggantikan .correct)
           btnElement.classList.replace("bg-white", "bg-emerald-500");
           btnElement.classList.replace("text-gray-700", "text-white");
           btnElement.classList.replace("border-gray-200", "border-emerald-500");
@@ -176,20 +271,18 @@
           correctAnswersCount++;
           playCorrectSound();
         } else {
-          // Warna Gagal Merah Tailwind (Menggantikan .wrong)
           btnElement.classList.replace("bg-white", "bg-red-500");
           btnElement.classList.replace("text-gray-700", "text-white");
           btnElement.classList.replace("border-gray-200", "border-red-500");
           btnElement.innerHTML = `<strong class="text-white mr-1">${selectedKey}.</strong> ${q.options[selectedKey]}`;
           playWrongSound();
           
-          // Cari kunci jawaban yang benar, paksa ganti jadi hijau biar peserta tahu
           Object.keys(q.options).forEach((key, index) => {
              if(key === q.correct_answer) {
                  buttons[index].classList.replace("bg-white", "bg-emerald-500");
                  buttons[index].classList.replace("text-gray-700", "text-white");
                  buttons[index].classList.replace("border-gray-200", "border-emerald-500");
-                 buttons[index].innerHTML = `<strong class="text-white mr-1">${key}.</strong> ${q.options[key]}`;
+                 buttons[index].innerHTML = `<strong class="text-white mr-1 holiday-color">${key}.</strong> ${q.options[key]}`;
              }
           });
         }
@@ -203,57 +296,187 @@
         const modal = document.getElementById("result-modal");
         const modalBox = modal.querySelector('div');
         const statusText = document.getElementById("modal-status");
-        const expText = document.getElementById("modal-explanation");
+        
+        const expBox = document.getElementById("explanation-container");
+        expBox.classList.remove("flex");
+        expBox.classList.add("hidden");
 
         if (isCorrect) {
-          statusText.innerText = "🎉 Benar Sekali!";
-          statusText.className = "text-xl font-bold mb-2 text-emerald-500";
+          statusText.innerText = "Benar Sekali!";
+          statusText.className = "text-lg font-black mb-1 text-emerald-500";
         } else {
-          statusText.innerText = "❌ Kurang Tepat!";
-          statusText.className = "text-xl font-bold mb-2 text-red-500";
+          statusText.innerText = "Kurang Tepat!";
+          statusText.className = "text-lg font-black mb-1 text-red-500";
         }
 
-        expText.innerText = currentQuestion.explanation || "Tidak ada pembahasan spesifik untuk soal ini.";
+        document.getElementById("modal-explanation").innerText = currentQuestion.explanation || "Tidak ada pembahasan spesifik untuk soal ini.";
         
-        // Munculkan Modal dengan Efek Pop In bawaan Tailwind + Kustom CSS
-        modal.classList.replace("hidden", "flex");
+        modal.classList.remove("hidden");
+        modal.classList.add("flex");
         setTimeout(() => {
-            modalBox.classList.replace("scale-80", "scale-100");
-            modalBox.classList.replace("opacity-0", "opacity-100");
-            modalBox.classList.add("animate-pop-in");
+            modalBox.classList.remove("scale-80", "opacity-0");
+            modalBox.classList.add("scale-100", "opacity-100", "animate-pop-in");
         }, 10);
+      }
+
+      function showExplanationContent() {
+          const expBox = document.getElementById("explanation-container");
+          expBox.classList.remove("hidden");
+          expBox.classList.add("flex");
+          expBox.scrollIntoView({ behavior: 'smooth' });
       }
 
       function nextQuestion() {
         const modal = document.getElementById("result-modal");
         const modalBox = modal.querySelector('div');
         
-        // Sembunyikan Modal kembali
-        modalBox.classList.replace("scale-100", "scale-80");
-        modalBox.classList.replace("opacity-100", "opacity-0");
-        modalBox.classList.remove("animate-pop-in");
+        modalBox.classList.remove("scale-100", "opacity-100", "animate-pop-in");
+        modalBox.classList.add("scale-80", "opacity-0");
         
         setTimeout(() => {
-            modal.classList.replace("flex", "hidden");
+            modal.classList.remove("flex");
+            modal.classList.add("hidden");
             currentQuestionIndex++;
             
             if (currentQuestionIndex < quizData.length) {
-              loadQuestion();
+              checkAndHandleSectionTransition(false);
             } else {
-              finishQuizAndSubmit();
+              processAutoSubmitAndShowResults();
             }
         }, 200);
       }
 
-      function finishQuizAndSubmit() {
-        switchScreen("loading-screen");
-        const finalScore = Math.round((correctAnswersCount / quizData.length) * 100);
-        document.getElementById("form-score").value = finalScore;
-        document.getElementById("form-answers").value = JSON.stringify(pesertaAnswers);
-        document.getElementById("submit-form").submit();
+      function processAutoSubmitAndShowResults() {
+          switchScreen("loading-screen");
+
+          const finalScore = Math.round((correctAnswersCount / quizData.length) * 100);
+          
+          const formData = new FormData();
+          formData.append('_token', '{{ csrf_token() }}');
+          formData.append('final_score', finalScore);
+          formData.append('peserta_answers', JSON.stringify(pesertaAnswers));
+
+          fetch(document.getElementById("submit-form").action, {
+              method: "POST",
+              body: formData
+          })
+          .then(response => {
+              renderCompletionModalView(finalScore);
+          })
+          .catch(error => {
+              console.error("Gagal mengirim lembar jawaban:", error);
+              renderCompletionModalView(finalScore);
+          });
       }
 
-      // Jalankan inisialisasi screen pertama kali
+      // REVISI LOGIKA TOGGLE: Menampilkan review di tengah (di bawah skor & di atas button)
+      function toggleFullReviewList(btnElement) {
+          const reviewList = document.getElementById("completion-review-list");
+          const arrow = btnElement.querySelector('span:last-child');
+
+          if (reviewList.classList.contains("hidden")) {
+              reviewList.classList.remove("hidden");
+              reviewList.classList.add("block", "animate-fade-in");
+              btnElement.classList.replace("bg-amber-500", "bg-amber-600");
+              btnElement.querySelector('span:first-child').innerText = "🙈 Tutup Review";
+              arrow.style.transform = "rotate(180deg)";
+          } else {
+              reviewList.classList.remove("block", "animate-fade-in");
+              reviewList.classList.add("hidden");
+              btnElement.classList.replace("bg-amber-600", "bg-amber-500");
+              btnElement.querySelector('span:first-child').innerText = "👁️ Lihat Review";
+              arrow.style.transform = "rotate(0deg)";
+          }
+      }
+
+function togglePembahasan(idx) {
+    const bahasDiv = document.getElementById(`bahas-${idx}`);
+    const icon = document.getElementById(`icon-bahas-${idx}`);
+
+    if (bahasDiv.classList.contains("hidden")) {
+        // Tampilkan pembahasan
+        bahasDiv.classList.remove("hidden");
+        bahasDiv.classList.add("block", "animate-fade-in");
+        icon.style.transform = "rotate(180deg)";
+    } else {
+        // Sembunyikan pembahasan
+        bahasDiv.classList.remove("block", "animate-fade-in");
+        bahasDiv.classList.add("hidden");
+        icon.style.transform = "rotate(0deg)";
+    }
+}
+
+      // RENDER REVIEW: Dioptimalkan ukurannya (text-xs) agar hemat space di mata mobile user
+      function renderCompletionModalView(finalScore) {
+          const completionModal = document.getElementById("quiz-completion-modal");
+          const completionModalBox = completionModal.querySelector('div');
+          
+          document.getElementById("completion-score-badge").innerText = `${finalScore} / 100`;
+
+          const reviewListContainer = document.getElementById("completion-review-list");
+          reviewListContainer.innerHTML = ""; 
+
+          quizData.forEach((q, idx) => {
+              const chosen = pesertaAnswers[q.id] || '';
+              const isCorrect = (chosen === q.correct_answer);
+
+              const questionCard = document.createElement("div");
+              questionCard.className = "p-3 rounded-xl border border-gray-100 bg-gray-50/60 text-left text-xs leading-normal mb-2";
+              
+              let optionsHtml = '';
+              Object.keys(q.options).forEach((key) => {
+                  let badgeText = '';
+                  let textStyle = 'text-gray-500';
+                  
+                  if (key === q.correct_answer) {
+                      badgeText = ' <span class="text-emerald-600 font-bold text-[10px]">[Kunci]</span>';
+                      textStyle = 'text-emerald-700 font-semibold';
+                  } else if (key === chosen && !isCorrect) {
+                      badgeText = ' <span class="text-red-500 font-bold text-[10px]">[Kamu]</span>';
+                      textStyle = 'text-red-600 line-through';
+                  }
+
+                  optionsHtml += `<p class="pl-2 py-0.5 ${textStyle}"><strong>${key}.</strong> ${q.options[key]} ${badgeText}</p>`;
+              });
+
+              const explanationText = q.explanation ? q.explanation : "Pembahasan belum tersedia untuk soal ini.";
+
+              questionCard.innerHTML = `
+                  <div class="flex justify-between items-center border-b border-gray-200 pb-1.5 mb-1.5">
+                      <span class="font-bold text-gray-400 text-[11px]">Soal #${idx + 1}</span>
+                      <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isCorrect ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}">
+                          ${isCorrect ? '✓ Benar' : '✗ Salah'}
+                      </span>
+                  </div>
+                  <p class="font-bold text-gray-700 mb-1.5 text-xs">${q.question_text}</p>
+                  <div class="space-y-0.5 bg-white p-2 rounded-lg border border-gray-100/70 text-[11px]">${optionsHtml}</div>
+                  
+<div class="mt-2">
+    <button onclick="togglePembahasan(${idx})" class="w-full text-left bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-1.5 px-2.5 rounded-lg border border-indigo-100 text-[11px] flex justify-between items-center transition duration-150 cursor-pointer">
+        <span>💡 Lihat Pembahasan</span>
+        <span id="icon-bahas-${idx}" class="transition-transform duration-200 inline-block">&#9662;</span>
+    </button>
+    <div id="bahas-${idx}" class="hidden mt-1.5 bg-indigo-50/40 p-2 rounded-lg border-l-2 border-indigo-400 transition-all duration-300">
+        <p class="text-[11px] text-gray-600 leading-relaxed">${explanationText}</p>
+    </div>
+</div>
+              `;
+
+              reviewListContainer.appendChild(questionCard);
+          });
+
+          completionModal.classList.remove("hidden");
+          completionModal.classList.add("flex");
+          setTimeout(() => {
+              completionModalBox.classList.remove("scale-80", "opacity-0");
+              completionModalBox.classList.add("scale-100", "opacity-100");
+          }, 10);
+      }
+
+      function redirectToDashboard() {
+          window.location.href = "{{ route('peserta.dashboard') }}"; 
+      }
+
       document.addEventListener("DOMContentLoaded", () => {
           switchScreen("start-screen");
       });

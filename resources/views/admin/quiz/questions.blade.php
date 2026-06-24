@@ -10,73 +10,105 @@
 
     @include('layouts.navbar')
 
-
-
     <div class="max-w-6xl mx-auto mt-6 md:mt-8 px-4 pb-16 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
         
-        <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm h-fit border border-gray-100">
-            <h2 class="text-base font-bold text-gray-800 mb-4">Tambah Pertanyaan</h2>
+        <div class="md:col-span-1 flex flex-col space-y-6">
             
-            @if(session('success'))
-                <div class="bg-green-100 text-green-700 p-3 rounded-lg mb-4 text-xs font-semibold">{{ session('success') }}</div>
-            @endif
+            <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm h-fit border border-gray-100">
+                <h2 class="text-base font-bold text-gray-800 mb-4">Tambah Pertanyaan</h2>
+                
+                @if(session('success'))
+                    <div class="bg-green-100 text-green-700 p-3 rounded-lg mb-4 text-xs font-semibold">{{ session('success') }}</div>
+                @endif
 
-            @if ($errors->any())
-    <div class="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-xs font-semibold">
-        {{ $errors->first() }}
-    </div>
-@endif
+                @if ($errors->any())
+                    <div class="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-xs font-semibold">
+                        {{ $errors->first() }}
+                    </div>
+                @endif
 
-            <form action="{{ route('admin.quiz.questions.store', $quiz->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
-                @csrf
-                <div>
-                    <label class="block text-gray-600 text-xs font-semibold mb-1">Pertanyaan / Soal</label>
-                    <textarea name="question_text" rows="2" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500"></textarea>
-                </div>
-                <div>
-                    <label class="block text-gray-600 text-xs font-semibold mb-1">Upload Gambar (Optional)</label>
-                    <input type="file" name="image" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                </div>
-                <div>
-                    <label class="block text-gray-600 text-xs font-semibold mb-1">Upload Audio Listening (Optional)</label>
-                    <input type="file" name="audio" accept="audio/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
+                <form action="{{ route('admin.quiz.questions.store', $quiz->id) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    @csrf
                     <div>
-                        <label class="block text-gray-600 text-xs font-semibold mb-1">Pilihan A</label>
-                        <input type="text" name="option_a" required class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
+                        <label class="block text-gray-600 text-xs font-semibold mb-1">Pertanyaan / Soal</label>
+                        <textarea name="question_text" rows="2" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500"></textarea>
                     </div>
                     <div>
-                        <label class="block text-gray-600 text-xs font-semibold mb-1">Pilihan B</label>
-                        <input type="text" name="option_b" required class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
+                        <label class="block text-gray-600 text-xs font-semibold mb-1">Upload Gambar (Optional)</label>
+                        <input type="file" name="image" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                     </div>
                     <div>
-                        <label class="block text-gray-600 text-xs font-semibold mb-1">Pilihan C</label>
-                        <input type="text" name="option_c" required class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none"">
+                        <label class="block text-gray-600 text-xs font-semibold mb-1">Upload Audio Listening (Optional)</label>
+                        <input type="file" name="audio" accept="audio/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-gray-600 text-xs font-semibold mb-1">Pilihan A</label>
+                            <input type="text" name="option_a" required class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-gray-600 text-xs font-semibold mb-1">Pilihan B</label>
+                            <input type="text" name="option_b" required class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-gray-600 text-xs font-semibold mb-1">Pilihan C</label>
+                            <input type="text" name="option_c" required class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-gray-600 text-xs font-semibold mb-1">Pilihan D</label>
+                            <input type="text" name="option_d" required class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
+                        </div>
                     </div>
                     <div>
-                        <label class="block text-gray-600 text-xs font-semibold mb-1">Pilihan D</label>
-                        <input type="text" name="option_d" required class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
+                        <label class="block text-gray-600 text-xs font-semibold mb-1">Jawaban Benar</label>
+                        <select name="correct_answer" required class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
                     </div>
-                </div>
-                <div>
-                    <label class="block text-gray-600 text-xs font-semibold mb-1">Jawaban Benar</label>
-                    <select name="correct_answer" required class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-gray-600 text-xs font-semibold mb-1">Pembahasan (Optional)</label>
-                    <textarea name="explanation" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500" placeholder="Masukkan materi/pembahasan soal..."></textarea>
-                </div>
-                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition cursor-pointer">Simpan Soal</button>
-            </form>
+                    <div>
+                        <label class="block text-gray-600 text-xs font-semibold mb-1">Pembahasan (Optional)</label>
+                        <textarea name="explanation" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500" placeholder="Masukkan materi/pembahasan soal..."></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition cursor-pointer">Simpan Soal</button>
+                </form>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-800 mb-1 flex items-center space-x-1">
+                    <span>Metode 2: Tarik dari Bank Soal</span>
+                </h3>
+                <p class="text-[10px] text-gray-400 mb-4 leading-relaxed">Pilih salah satu materi part di Bank Soal untuk dimasukkan langsung secara massal ke kuis ini.</p>
+                
+                <form action="{{ route('admin.quiz.pull_bank', $quiz->id) }}" method="POST" class="space-y-4">
+                    @csrf
+                    <div>
+                        <label class="block text-gray-600 text-[11px] font-semibold mb-1">Pilih Materi / Part Bank</label>
+                        <select name="bank_part_id" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 bg-white">
+                            <option value="">-- Pilih Part Bank Soal --</option>
+                            @foreach($bankSoalList as $bank)
+                                <optgroup label="🏢 Kategori: {{ $bank->name }}">
+                                    @foreach($bank->parts as $part)
+                                        <option value="{{ $part->id }}">
+                                            📄 {{ $part->part_name }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition cursor-pointer shadow-xs flex items-center justify-center space-x-1">
+                        <span>Masukkan Soal ke Kuis</span>
+                    </button>
+                </form>
+            </div>
+            
         </div>
 
-        <div class="md:col-span-2 bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100">
+        <div class="md:col-span-2 bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
             <h2 class="text-base md:text-lg font-bold text-gray-800 mb-4">Daftar Soal Kuis: <span class="text-indigo-600">{{ $quiz->title }}</span></h2>
             <div class="space-y-6">
                 @forelse($questions as $index => $q)
@@ -107,8 +139,7 @@
 
                         @if($q->audio)
                             <div class="my-3 pl-4 max-w-sm">
-                                <audio src="/storage/{{ $q->audio }}" controls class="w-full scale-90 origin-left outline-none"></audio>
-                            </div>
+<audio src="{{ route('audio.stream', ['path' => $q->audio]) }}" controls class="w-full max-w-sm outline-none scale-90 origin-left"></audio>                            </div>
                         @endif
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 pl-4 text-xs text-gray-600">
                             <p class="p-2 rounded-md {{ $q->correct_answer == 'A' ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200' : 'bg-gray-50' }}">A. {{ $q->options['A'] }}</p>
@@ -203,7 +234,7 @@
     </div>
 
     <script>
-function openEditModal(questionData) {
+        function openEditModal(questionData) {
             const modal = document.getElementById('edit-modal');
             const form = document.getElementById('edit-form');
             
@@ -247,5 +278,5 @@ function openEditModal(questionData) {
             document.getElementById('edit-modal').classList.replace('flex', 'hidden');
         }
     </script>
-    </body>
+</body>
 </html>

@@ -6,6 +6,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminPesertaController;
 use App\Http\Controllers\AdminQuizController;
 use App\Http\Controllers\PesertaController;
+use App\Http\Controllers\AudioStreamController;
+use App\Http\Controllers\QuestionBankController;
 
 Route::get('/', function () {
     return redirect('/login');
@@ -14,6 +16,7 @@ Route::get('/', function () {
 Route::get('/login', [App\Http\Controllers\AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [App\Http\Controllers\AuthController::class, 'login']);
 Route::post('/logout', [App\Http\Controllers\AuthController::class, 'logout'])->name('logout');
+Route::get('/stream-audio', [AudioStreamController::class, 'stream'])->name('audio.stream');
 
 // Kelompok Route Khusus Admin (Harus login & role-nya admin)
 Route::middleware(['auth', 'role:admin'])->group(function () {
@@ -30,7 +33,25 @@ Route::put('/admin/peserta/{user}', [AdminPesertaController::class, 'update'])->
     Route::delete('/admin/quiz/{quiz}', [AdminQuizController::class, 'destroyQuiz'])->name('admin.quiz.destroy');
 Route::put('/admin/question/{question}', [AdminQuizController::class, 'updateQuestion'])->name('admin.quiz.questions.update');
     Route::delete('/admin/question/{question}', [AdminQuizController::class, 'destroyQuestion'])->name('admin.quiz.questions.destroy');
+Route::get('/admin/rekap/{result}', [AdminPesertaController::class, 'showResultDetail'])->name('admin.rekap.detail');
 
+// Rute Baru: Manajemen Bank Soal & Part
+    Route::get('/admin/bank-soal', [QuestionBankController::class, 'index'])->name('admin.bank.index');
+    Route::post('/admin/bank-soal', [QuestionBankController::class, 'storeBank'])->name('admin.bank.store');
+    Route::delete('/admin/bank-soal/{bank}', [QuestionBankController::class, 'destroyBank'])->name('admin.bank.destroy');
+
+    // Rute Masuk ke Dalam Part Bank Soal
+    Route::get('/admin/bank-soal/{bank}/parts', [QuestionBankController::class, 'showParts'])->name('admin.bank.parts');
+    Route::post('/admin/bank-soal/{bank}/parts', [QuestionBankController::class, 'storePart'])->name('admin.bank.parts.store');
+    Route::delete('/admin/bank-soal/parts/{part}', [QuestionBankController::class, 'destroyPart'])->name('admin.bank.parts.destroy');
+
+Route::get('/admin/bank-soal/parts/{part}/questions', [QuestionBankController::class, 'showBankQuestions'])->name('admin.bank.questions');
+    Route::post('/admin/bank-soal/parts/{part}/questions', [QuestionBankController::class, 'storeBankQuestion'])->name('admin.bank.questions.store');
+    
+    // Rute Kosong Placeholder untuk Import Excel (Akan dieksekusi setelah ini)
+    Route::post('/admin/bank-soal/parts/{part}/import', [QuestionBankController::class, 'importExcelPlaceholder'])->name('admin.bank.questions.import');
+Route::post('/admin/quiz/{quiz}/pull-from-bank', [AdminQuizController::class, 'pullFromBankSoal'])->name('admin.quiz.pull_bank');
+Route::post('/admin/peserta/{id}/reset-password', [AdminPesertaController::class, 'resetPassword'])->name('admin.peserta.reset_password');
 });
 // Kelompok Route Khusus Peserta (Harus login & role-nya peserta)
 // Kelompok Route Khusus Peserta (Harus login & role-nya peserta)

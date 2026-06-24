@@ -34,24 +34,27 @@
             <h2 class="text-lg font-bold text-gray-800 mb-4">Daftar Kuis</h2>
             <div class="grid grid-cols-1 gap-4">
                 @forelse($quizzes as $quiz)
-<div class="border border-gray-200 p-4 rounded-lg flex justify-between items-center bg-gray-50">
-    <div>
-        <h3 class="font-bold text-gray-800 text-lg">{{ $quiz->title }}</h3>
-        <p class="text-gray-500 text-sm mt-1">{{ $quiz->description ?? 'Tidak ada deskripsi.' }}</p>
+<div class="border border-gray-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between sm:items-center bg-gray-50 gap-4">
+    <div class="flex-1">
+        <h3 class="font-bold text-gray-800 text-base md:text-lg">{{ $quiz->title }}</h3>
+        <p class="text-gray-500 text-xs md:text-sm mt-1 leading-relaxed">{{ $quiz->description ?? 'Tidak ada deskripsi.' }}</p>
     </div>
-    <div class="flex space-x-2"> <a href="{{ route('admin.quiz.questions', $quiz->id) }}" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition">
-            Kelola Soal &rarr;
-        </a>
-        
-        <form action="{{ route('admin.quiz.destroy', $quiz->id) }}" method="POST" onsubmit="return confirm('Hapus kuis ini?')">
-            @csrf
-            @method('DELETE')
-            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-3 py-2 rounded-lg transition">
-                Hapus
-            </button>
-        </form>
+    <div class="shrink-0">
+<div class="flex flex-wrap items-center justify-end sm:justify-start gap-2">
+    <a href="{{ route('admin.quiz.questions', $quiz->id) }}" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition whitespace-nowrap inline-block">
+        Kelola Soal &rarr;
+    </a>
+    
+    <form action="{{ route('admin.quiz.destroy', $quiz->id) }}" method="POST" onsubmit="return confirm('Hapus kuis ini?')" class="inline-block">
+        @csrf
+        @method('DELETE')
+        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white text-xs font-bold px-3.5 py-2 rounded-lg transition whitespace-nowrap cursor-pointer">
+            Hapus
+        </button>
+    </form>
+</div>
     </div>
-</div>                @empty
+</div>              @empty
                     <p class="text-gray-400 text-center py-4">Belum ada kuis yang dibuat.</p>
                 @endforelse
             </div>

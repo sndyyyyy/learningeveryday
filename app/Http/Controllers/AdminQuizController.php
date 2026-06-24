@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\QuestionBank;
+use App\Models\BankPart;
+use App\Models\BankQuestion;
 use App\Models\Quiz;
 use App\Models\Question;
 use Illuminate\Http\Request;
@@ -35,12 +38,55 @@ class AdminQuizController extends Controller
     }
 
     // 3. Menampilkan Halaman Kelola Soal berdasarkan Kuis tertentu
+
     public function showQuestions(Quiz $quiz)
-    {
-        // Mengambil semua soal yang berelasi dengan kuis ini
-        $questions = Question::where('quiz_id', $quiz->id)->get();
-        return view('admin.quiz.questions', compact('quiz', 'questions'));
+{
+    $questions = Question::where('quiz_id', $quiz->id)->oldest()->get();
+
+    $bankSoalList = QuestionBank::with('parts')->get();
+
+    return view('admin.quiz.questions', compact('quiz', 'questions', 'bankSoalList'));
+}
+
+// 2. METHOD BARU: Logika Menyalin Soal dari Bank Soal ke Tabel Questions Kuis
+public function pullFromBankSoal(Request $request, Quiz $quiz)
+{
+    $request->validate([
+        'bank_part_id' => 'required|exists:bank_parts,id'
+    ]);
+
+    // Ambil semua soal yang ada di dalam Part Bank Soal yang dipilih admin
+    $bankQuestions = BankQuestion::where('bank_part_id', $request->bank_part_id)->get();
+
+    if ($bankQuestions->isEmpty()) {
+        return redirect()->back()->with('error', 'Part Bank Soal yang dipilih ternyata masih kosong, tidak ada soal yang bisa ditarik!');
     }
+
+    $copiedCount = 0;
+    foreach ($bankQuestions as $bq) {
+        // Cek duplikasi: Agar soal yang sama dari part ini tidak masuk dua kali ke kuis ini
+        $exists = Question::where('quiz_id', $quiz->id)
+                            ->where('question_text', $bq->question_text)
+                            ->exists();
+
+        if (!$exists) {
+            // Salin record dari tabel bank_questions ke tabel questions milik kuis
+            Question::create([
+                'quiz_id' => $quiz->id,
+                'bank_part_id' => $bq->bank_part_id, // Catat track asalnya
+                'question_text' => $bq->question_text,
+                'image' => $bq->image, // Ikut menyalin path gambar
+                'audio' => $bq->audio, // Ikut menyalin path audio
+                'options' => $bq->options, // Data JSON Array otomatis tercopy aman karena cast model
+                'correct_answer' => $bq->correct_answer,
+                'explanation' => $bq->explanation
+            ]);
+            $copiedCount++;
+        }
+    }
+
+    return redirect()->back()->with('success', "Berhasil menarik {$copiedCount} soal dari Bank Soal ke dalam kuis ini!");
+}
 
     // 4. Menyimpan Soal Baru ke dalam Kuis
 public function storeQuestion(Request $request, Quiz $quiz)
