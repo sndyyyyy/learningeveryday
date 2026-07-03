@@ -9,6 +9,7 @@ class BankQuestion extends Model
 {
     protected $fillable = [
         'bank_part_id',
+        'type',
         'question_text',
         'image',
         'audio',

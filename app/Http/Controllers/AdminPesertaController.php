@@ -27,7 +27,7 @@ $allResults = QuizResult::with(['quiz', 'user'])->latest()->get();
         // Validasi input dari form
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|max:255|unique:users',
             'password' => 'required|string|min:6',
         ]);
 
@@ -62,7 +62,7 @@ public function update(Request $request, User $user)
 {
     $request->validate([
         'name' => 'required|string|max:255',
-        'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+        'email' => 'required|string|max:255|unique:users,email,' . $user->id,
     ]);
 
     $user->update([
@@ -94,4 +94,59 @@ public function showResultDetail(QuizResult $result)
 
     return view('admin.peserta.rekap-detail', compact('result', 'quiz', 'questions'));
 }
+
+public function importPeserta(Request $request)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:csv,txt|max:2048'
+        ]);
+
+        $file = $request->file('excel_file');
+        $path = $file->getRealPath();
+
+        if (($handle = fopen($path, "r")) !== FALSE) {
+            // Lewati baris pertama (Header: Nama, Email, Password)
+            fgetcsv($handle, 1000, ",");
+
+            $importedCount = 0;
+            $skippedCount = 0;
+
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                // Pastikan ada 3 kolom terisi
+                if (count($data) >= 3) {
+                    $name = trim($data[0]);
+                    $email = trim($data[1]); // Bisa diisi Username / Email
+                    $password = trim($data[2]);
+
+                    if (!empty($name) && !empty($email) && !empty($password)) {
+                        // Cek apakah email/username sudah pernah ada di database
+                        $exists = User::where('email', $email)->exists();
+                        
+                        if (!$exists) {
+                            User::create([
+                                'name' => $name,
+                                'email' => $email,
+                                'password' => Hash::make($password),
+                                'raw_password' => $password,
+                                'role' => 'peserta',
+                            ]);
+                            $importedCount++;
+                        } else {
+                            $skippedCount++; // Lewati jika duplikat
+                        }
+                    }
+                }
+            }
+            fclose($handle);
+            
+            $msg = "Berhasil mengimpor {$importedCount} akun peserta baru!";
+            if ($skippedCount > 0) {
+                $msg .= " ({$skippedCount} akun dilewati karena email/username sudah terdaftar).";
+            }
+
+            return redirect()->back()->with('success', $msg);
+        }
+
+        return redirect()->back()->with('error', 'Gagal membaca file CSV.');
+    }
 }

@@ -10,16 +10,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <style>
-        body {
-                  font-family: 'Poppins', sans-serif;
-              }
-      @keyframes popInModal { to { transform: scale(1); opacity: 1; } }
-      @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+        body { font-family: 'Poppins', sans-serif; }
+        @keyframes popInModal { to { transform: scale(1); opacity: 1; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
       
-      .animate-pop-in { animation: popInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-      .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-      .shake { animation: shake 0.4s ease-in-out; }
+        .animate-pop-in { animation: popInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .shake { animation: shake 0.4s ease-in-out; }
     </style>
   </head>
   <body class="bg-gray-100 text-gray-800 flex justify-center items-center min-h-screen overflow-y-auto py-6">
@@ -53,21 +51,21 @@
     <div id="quiz-completion-modal" class="fixed top-0 left-0 w-full h-full bg-black/60 hidden justify-center items-center z-50 backdrop-blur-md transition-all duration-300">
       <div class="bg-white p-5 md:p-6 rounded-2xl max-w-lg w-[92%] shadow-2xl scale-80 opacity-0 transition-all duration-300 flex flex-col max-h-[92vh]">
         
-        <div class="border-b border-gray-100 pb-3 mb-3 flex justify-between items-center shrink-0">
-            <div>
-                <h3 class="text-base md:text-lg font-bold text-gray-800">Kuis Selesai! 🎉</h3>
-                <p class="text-[10px] md:text-xs text-gray-400 mt-0.5">Nilai tersimpan otomatis di database.</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 shrink-0">
+            <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+                <span class="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mb-1">Skor Akhir</span>
+                <span id="completion-score-badge" class="text-5xl font-black text-indigo-600 leading-none">0</span>
             </div>
-            <div class="text-right bg-emerald-50/80 p-2 px-4 rounded-xl border border-emerald-100">
-                <span class="text-[10px] text-emerald-600 font-bold block leading-none mb-1">Skor Kamu</span>
-                <span id="completion-score-badge" class="text-xl md:text-2xl font-black text-emerald-600 leading-none">0 / 100</span>
+            
+            <div class="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-center justify-center text-center">
+                <p id="completion-desc-text" class="text-xs md:text-sm text-gray-700 font-medium leading-relaxed"></p>
             </div>
         </div>
 
-        <div id="completion-review-list" class="hidden max-h-[320px] md:max-h-[380px] overflow-y-auto space-y-4 pr-1 mb-3 border-b border-gray-100 pb-3">
+        <div id="completion-review-list" class="hidden max-h-[280px] overflow-y-auto space-y-4 pr-1 mb-3 border-y border-gray-100 py-3">
             </div>
 
-        <div class="flex flex-row gap-2 w-full shrink-0">
+        <div class="flex flex-row gap-2 w-full shrink-0 mt-1">
             <button id="btn-toggle-review" class="w-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-2 rounded-xl shadow-sm transition duration-150 cursor-pointer text-[11px] md:text-xs text-center flex items-center justify-center space-x-1" onclick="toggleFullReviewList(this)">
                 <span>👁️ Lihat Review</span>
                 <span class="transition-transform duration-150 transform inline-block text-[9px]">&#9662;</span>
@@ -80,7 +78,7 @@
       </div>
     </div>
 
-    <div id="app" class="bg-white w-[90%] max-w-[480px] p-6 md:p-8 rounded-2xl shadow-xl relative z-20 m-auto transition-all duration-300">
+    <div id="app" class="bg-white w-[90%] max-w-[500px] p-6 md:p-8 rounded-2xl shadow-xl relative z-20 m-auto transition-all duration-300">
       
       <div id="start-screen" class="screen hidden flex-col items-center text-center animate-fade-in">
         <h1 class="text-xl md:text-2xl font-bold text-indigo-600 mb-2">{{ $quiz->title }}</h1>
@@ -103,13 +101,14 @@
           </div>
       </div>
 
-      <div id="quiz-screen" class="screen hidden flex-col items-center text-center animate-fade-in">
+      <div id="quiz-screen" class="screen hidden flex-col items-center text-center animate-fade-in w-full">
         <div class="w-full h-1.5 bg-gray-200 rounded-full mb-4 overflow-hidden">
           <div class="h-full bg-indigo-600 w-0 transition-all duration-300 ease-out" id="progress"></div>
         </div>
         
         <p id="question-counter" class="text-indigo-600 text-[10px] font-bold bg-indigo-50 px-2.5 py-1 rounded-full mb-3 tracking-wide border border-indigo-100/50"></p>
-        <h2 id="question-text" class="text-base md:text-lg font-bold text-gray-800 mb-5 leading-snug">Loading Question...</h2>
+        
+        <h2 id="question-text" class="text-base md:text-lg font-bold text-gray-800 mb-5 leading-relaxed w-full">Loading Question...</h2>
         
         <div id="media-container" class="w-full"></div>
         <div class="options-container w-full mt-3" id="options"></div>
@@ -129,9 +128,11 @@
 
     <script>
       const quizData = @json($questions);
+      // Mengambil username/email peserta yang sedang login langsung dari Laravel
+      const pesertaUsername = "{{ Auth::user()->email ?? Auth::user()->name }}"; 
 
       let currentQuestionIndex = 0;
-      let correctAnswersCount = 0;
+      let totalEarnedScore = 0; 
       let isAnswering = false;
       let pesertaAnswers = {}; 
 
@@ -217,12 +218,12 @@
             return itemPartId === currentPartId;
         }).length;
 
-        document.getElementById("question-text").innerText = q.question_text;
         document.getElementById("question-counter").innerText = `⚡ ${currentSectionName} • Soal ${sectionQuestionCounter} dari ${totalSoalInThisSection}`;
         
         const progress = (currentQuestionIndex / quizData.length) * 100;
         document.getElementById("progress").style.width = `${progress}%`;
 
+        const questionTextContainer = document.getElementById("question-text");
         const optionsContainer = document.getElementById("options");
         const mediaContainer = document.getElementById("media-container");
         
@@ -235,7 +236,6 @@
           img.className = "w-full max-h-[180px] object-contain rounded-xl mb-3 shadow-sm border border-gray-100 animate-fade-in";
           mediaContainer.appendChild(img);
         }
-
         if (q.audio) {
           const audioPlayer = document.createElement("audio");
           audioPlayer.src = `{{ route('audio.stream') }}?path=${encodeURIComponent(q.audio)}`;
@@ -244,13 +244,42 @@
           mediaContainer.appendChild(audioPlayer);
         }
 
-        Object.keys(q.options).forEach((key) => {
-          const btn = document.createElement("button");
-          btn.className = "option-btn w-full text-left bg-white text-gray-700 border-2 border-gray-200 p-3.5 rounded-xl mb-2.5 font-medium transition-all duration-200 hover:border-indigo-600 hover:bg-indigo-50 cursor-pointer text-sm md:text-base";
-          btn.innerHTML = `<strong class="text-indigo-600 mr-1">${key}.</strong> ${q.options[key]}`;
-          btn.onclick = () => selectAnswer(key, btn);
-          optionsContainer.appendChild(btn);
-        });
+        if (q.type === 'essay') {
+            let parts = q.question_text.split('[blank]');
+            let htmlText = '';
+            
+            for(let i=0; i<parts.length; i++) {
+                htmlText += parts[i];
+                if(i < parts.length - 1) {
+                    htmlText += `<input type="text" class="essay-blank-input mx-1 px-2 py-0.5 border-b-2 border-indigo-400 bg-indigo-50/50 focus:outline-none focus:border-indigo-600 focus:bg-white text-center w-24 md:w-32 text-sm font-bold text-indigo-700 transition rounded-t-md placeholder-gray-300" placeholder="...">`;
+                }
+            }
+            questionTextContainer.innerHTML = htmlText;
+
+            const btn = document.createElement("button");
+            btn.className = "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 cursor-pointer mt-4 text-sm";
+            btn.innerHTML = "Kunci & Cek Jawaban 🚀";
+            btn.onclick = () => submitEssayAnswer();
+            optionsContainer.appendChild(btn);
+
+            const inputs = document.querySelectorAll('.essay-blank-input');
+            inputs.forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') submitEssayAnswer();
+                });
+            });
+            if(inputs.length > 0) inputs[0].focus();
+
+        } else {
+            questionTextContainer.innerText = q.question_text;
+            Object.keys(q.options).forEach((key) => {
+              const btn = document.createElement("button");
+              btn.className = "option-btn w-full text-left bg-white text-gray-700 border-2 border-gray-200 p-3.5 rounded-xl mb-2.5 font-medium transition-all duration-200 hover:border-indigo-600 hover:bg-indigo-50 cursor-pointer text-sm md:text-base";
+              btn.innerHTML = `<strong class="text-indigo-600 mr-1">${key}.</strong> ${q.options[key]}`;
+              btn.onclick = () => selectAnswer(key, btn);
+              optionsContainer.appendChild(btn);
+            });
+        }
       }
 
       function selectAnswer(selectedKey, btnElement) {
@@ -264,11 +293,11 @@
         const buttons = document.querySelectorAll(".option-btn");
 
         if (isCorrect) {
+          totalEarnedScore += (100 / quizData.length);
           btnElement.classList.replace("bg-white", "bg-emerald-500");
           btnElement.classList.replace("text-gray-700", "text-white");
           btnElement.classList.replace("border-gray-200", "border-emerald-500");
           btnElement.innerHTML = `<strong class="text-white mr-1">${selectedKey}.</strong> ${q.options[selectedKey]}`;
-          correctAnswersCount++;
           playCorrectSound();
         } else {
           btnElement.classList.replace("bg-white", "bg-red-500");
@@ -282,17 +311,67 @@
                  buttons[index].classList.replace("bg-white", "bg-emerald-500");
                  buttons[index].classList.replace("text-gray-700", "text-white");
                  buttons[index].classList.replace("border-gray-200", "border-emerald-500");
-                 buttons[index].innerHTML = `<strong class="text-white mr-1 holiday-color">${key}.</strong> ${q.options[key]}`;
+                 buttons[index].innerHTML = `<strong class="text-white mr-1">${key}.</strong> ${q.options[key]}`;
              }
           });
         }
 
-        setTimeout(() => {
-          showModal(isCorrect, q);
-        }, 800);
+        setTimeout(() => { showModal(isCorrect ? 'correct' : 'wrong', q); }, 800);
       }
 
-      function showModal(isCorrect, currentQuestion) {
+      function submitEssayAnswer() {
+          if (isAnswering) return;
+          isAnswering = true;
+
+          const q = quizData[currentQuestionIndex];
+          const inputs = document.querySelectorAll('.essay-blank-input');
+          let userAnswers = [];
+          
+          let correctAnswers = [];
+          try { correctAnswers = JSON.parse(q.correct_answer); } 
+          catch(e) { correctAnswers = [q.correct_answer]; }
+
+          let correctBlanks = 0;
+          let totalBlanks = correctAnswers.length;
+
+          inputs.forEach((input, index) => {
+              let uAns = input.value.trim();
+              userAnswers.push(uAns);
+
+              let cAns = (correctAnswers[index] || "").trim();
+
+              if (uAns.toLowerCase() === cAns.toLowerCase()) {
+                  input.classList.remove("border-indigo-400", "bg-indigo-50/50");
+                  input.classList.add("border-emerald-500", "text-emerald-600", "bg-emerald-50");
+                  correctBlanks++;
+              } else {
+                  input.classList.remove("border-indigo-400", "bg-indigo-50/50");
+                  input.classList.add("border-red-500", "text-red-600", "bg-red-50");
+              }
+              input.disabled = true; 
+          });
+
+          pesertaAnswers[q.id] = JSON.stringify(userAnswers);
+
+          let pointsPerQuestion = 100 / quizData.length;
+          if (totalBlanks > 0) {
+              totalEarnedScore += (correctBlanks / totalBlanks) * pointsPerQuestion;
+          }
+
+          let allCorrect = (correctBlanks === totalBlanks && totalBlanks > 0);
+          let partialCorrect = (correctBlanks > 0 && correctBlanks < totalBlanks);
+
+          if (allCorrect || partialCorrect) {
+              playCorrectSound();
+          } else {
+              playWrongSound();
+          }
+
+          let status = allCorrect ? 'correct' : (partialCorrect ? 'partial' : 'wrong');
+          setTimeout(() => { showModal(status, q); }, 800);
+      }
+
+      function showModal(status, currentQuestion) {
         const modal = document.getElementById("result-modal");
         const modalBox = modal.querySelector('div');
         const statusText = document.getElementById("modal-status");
@@ -301,9 +380,12 @@
         expBox.classList.remove("flex");
         expBox.classList.add("hidden");
 
-        if (isCorrect) {
-          statusText.innerText = "Benar Sekali!";
+        if (status === 'correct') {
+          statusText.innerText = "Benar Sempurna!";
           statusText.className = "text-lg font-black mb-1 text-emerald-500";
+        } else if (status === 'partial') {
+          statusText.innerText = "Benar Sebagian!";
+          statusText.className = "text-lg font-black mb-1 text-amber-500";
         } else {
           statusText.innerText = "Kurang Tepat!";
           statusText.className = "text-lg font-black mb-1 text-red-500";
@@ -349,7 +431,7 @@
       function processAutoSubmitAndShowResults() {
           switchScreen("loading-screen");
 
-          const finalScore = Math.round((correctAnswersCount / quizData.length) * 100);
+          const finalScore = Math.round(totalEarnedScore);
           
           const formData = new FormData();
           formData.append('_token', '{{ csrf_token() }}');
@@ -369,7 +451,6 @@
           });
       }
 
-      // REVISI LOGIKA TOGGLE: Menampilkan review di tengah (di bawah skor & di atas button)
       function toggleFullReviewList(btnElement) {
           const reviewList = document.getElementById("completion-review-list");
           const arrow = btnElement.querySelector('span:last-child');
@@ -389,77 +470,145 @@
           }
       }
 
-function togglePembahasan(idx) {
-    const bahasDiv = document.getElementById(`bahas-${idx}`);
-    const icon = document.getElementById(`icon-bahas-${idx}`);
+      function togglePembahasan(idx) {
+          const bahasDiv = document.getElementById(`bahas-${idx}`);
+          const icon = document.getElementById(`icon-bahas-${idx}`);
 
-    if (bahasDiv.classList.contains("hidden")) {
-        // Tampilkan pembahasan
-        bahasDiv.classList.remove("hidden");
-        bahasDiv.classList.add("block", "animate-fade-in");
-        icon.style.transform = "rotate(180deg)";
-    } else {
-        // Sembunyikan pembahasan
-        bahasDiv.classList.remove("block", "animate-fade-in");
-        bahasDiv.classList.add("hidden");
-        icon.style.transform = "rotate(0deg)";
-    }
-}
+          if (bahasDiv.classList.contains("hidden")) {
+              bahasDiv.classList.remove("hidden");
+              bahasDiv.classList.add("block", "animate-fade-in");
+              icon.style.transform = "rotate(180deg)";
+          } else {
+              bahasDiv.classList.remove("block", "animate-fade-in");
+              bahasDiv.classList.add("hidden");
+              icon.style.transform = "rotate(0deg)";
+          }
+      }
 
-      // RENDER REVIEW: Dioptimalkan ukurannya (text-xs) agar hemat space di mata mobile user
+      // === MERENDER SKOR DAN DESKRIPSI (LOGIKA BARU) ===
       function renderCompletionModalView(finalScore) {
           const completionModal = document.getElementById("quiz-completion-modal");
           const completionModalBox = completionModal.querySelector('div');
           
-          document.getElementById("completion-score-badge").innerText = `${finalScore} / 100`;
+          // 1. Tampilkan Angka Skor (Murni tanpa /100)
+          document.getElementById("completion-score-badge").innerText = finalScore;
 
+          // 2. Set Deskripsi Sesuai Rentang Nilai
+          let descText = "";
+          let userHighlight = `<strong class="text-indigo-600">${pesertaUsername}</strong>`;
+          
+          if (finalScore < 60) {
+              descText = `Wah, ${userHighlight} kamu masih gagal :( , tingkatkan lagi ya!`;
+          } else if (finalScore <= 80) {
+              descText = `Nilai kamu cukup bagus ${userHighlight}, good job!`;
+          } else if (finalScore <= 99) {
+              descText = `Mendekati sempurna ${userHighlight}, very good!`;
+          } else {
+              descText = `Nilai sempurna ${userHighlight}, perfect! 🎉`;
+          }
+          
+          document.getElementById("completion-desc-text").innerHTML = descText;
+
+          // 3. Render Ulang Review (Logika Lama Tetap Aman)
           const reviewListContainer = document.getElementById("completion-review-list");
           reviewListContainer.innerHTML = ""; 
 
           quizData.forEach((q, idx) => {
               const chosen = pesertaAnswers[q.id] || '';
-              const isCorrect = (chosen === q.correct_answer);
-
+              
               const questionCard = document.createElement("div");
               questionCard.className = "p-3 rounded-xl border border-gray-100 bg-gray-50/60 text-left text-xs leading-normal mb-2";
               
               let optionsHtml = '';
-              Object.keys(q.options).forEach((key) => {
-                  let badgeText = '';
-                  let textStyle = 'text-gray-500';
-                  
-                  if (key === q.correct_answer) {
-                      badgeText = ' <span class="text-emerald-600 font-bold text-[10px]">[Kunci]</span>';
-                      textStyle = 'text-emerald-700 font-semibold';
-                  } else if (key === chosen && !isCorrect) {
-                      badgeText = ' <span class="text-red-500 font-bold text-[10px]">[Kamu]</span>';
-                      textStyle = 'text-red-600 line-through';
-                  }
+              let badgeLabel = '';
+              let badgeClass = '';
 
-                  optionsHtml += `<p class="pl-2 py-0.5 ${textStyle}"><strong>${key}.</strong> ${q.options[key]} ${badgeText}</p>`;
-              });
+              if (q.type === 'essay') {
+                  let userAnsArr = [];
+                  try { userAnsArr = JSON.parse(chosen); } catch(e) { userAnsArr = []; }
+                  
+                  let corrAnsArr = [];
+                  try { corrAnsArr = JSON.parse(q.correct_answer); } catch(e) { corrAnsArr = [q.correct_answer]; }
+
+                  let correctBlanksCount = 0;
+
+                  optionsHtml += `<div class="p-2.5 bg-white border border-gray-100 rounded-lg space-y-2">`;
+                  for(let i=0; i<corrAnsArr.length; i++) {
+                      let u = (userAnsArr[i] || "").trim();
+                      let c = corrAnsArr[i].trim();
+                      let isMatch = (u.toLowerCase() === c.toLowerCase());
+                      
+                      if(isMatch) correctBlanksCount++;
+
+                      let statusBadge = isMatch
+                          ? `<span class="text-emerald-600 font-bold text-[10px] ml-1 bg-emerald-50 px-1 rounded">✓ Benar</span>`
+                          : `<span class="text-red-500 font-bold text-[10px] ml-1 bg-red-50 px-1 rounded">✗ Salah (Kunci: ${c})</span>`;
+
+                      optionsHtml += `<p class="text-[11px] text-gray-700"><strong>Isian ${i+1}:</strong> <span class="${isMatch ? 'text-emerald-600 font-bold' : 'text-red-500 line-through'}">${u || 'Kosong'}</span> ${statusBadge}</p>`;
+                  }
+                  optionsHtml += `</div>`;
+
+                  if (correctBlanksCount === corrAnsArr.length && corrAnsArr.length > 0) {
+                      badgeLabel = '✓ Benar';
+                      badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+                  } else if (correctBlanksCount > 0) {
+                      badgeLabel = '◐ Sebagian';
+                      badgeClass = 'bg-amber-50 text-amber-700 border border-amber-200';
+                  } else {
+                      badgeLabel = '✗ Salah';
+                      badgeClass = 'bg-red-50 text-red-700 border border-red-200';
+                  }
+              } 
+              else {
+                  let isCorrect = (chosen === q.correct_answer);
+                  if (isCorrect) {
+                      badgeLabel = '✓ Benar';
+                      badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+                  } else {
+                      badgeLabel = '✗ Salah';
+                      badgeClass = 'bg-red-50 text-red-700 border border-red-200';
+                  }
+                  
+                  Object.keys(q.options).forEach((key) => {
+                      let badgeText = '';
+                      let textStyle = 'text-gray-500';
+                      
+                      if (key === q.correct_answer) {
+                          badgeText = ' <span class="text-emerald-600 font-bold text-[10px]">[Kunci]</span>';
+                          textStyle = 'text-emerald-700 font-semibold';
+                      } else if (key === chosen && !isCorrect) {
+                          badgeText = ' <span class="text-red-500 font-bold text-[10px]">[Kamu]</span>';
+                          textStyle = 'text-red-600 line-through';
+                      }
+
+                      optionsHtml += `<p class="pl-2 py-0.5 ${textStyle}"><strong>${key}.</strong> ${q.options[key]} ${badgeText}</p>`;
+                  });
+                  optionsHtml = `<div class="space-y-0.5 bg-white p-2 rounded-lg border border-gray-100/70 text-[11px]">${optionsHtml}</div>`;
+              }
 
               const explanationText = q.explanation ? q.explanation : "Pembahasan belum tersedia untuk soal ini.";
 
               questionCard.innerHTML = `
                   <div class="flex justify-between items-center border-b border-gray-200 pb-1.5 mb-1.5">
                       <span class="font-bold text-gray-400 text-[11px]">Soal #${idx + 1}</span>
-                      <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isCorrect ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}">
-                          ${isCorrect ? '✓ Benar' : '✗ Salah'}
+                      <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${badgeClass}">
+                          ${badgeLabel}
                       </span>
                   </div>
-                  <p class="font-bold text-gray-700 mb-1.5 text-xs">${q.question_text}</p>
-                  <div class="space-y-0.5 bg-white p-2 rounded-lg border border-gray-100/70 text-[11px]">${optionsHtml}</div>
                   
-<div class="mt-2">
-    <button onclick="togglePembahasan(${idx})" class="w-full text-left bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-1.5 px-2.5 rounded-lg border border-indigo-100 text-[11px] flex justify-between items-center transition duration-150 cursor-pointer">
-        <span>💡 Lihat Pembahasan</span>
-        <span id="icon-bahas-${idx}" class="transition-transform duration-200 inline-block">&#9662;</span>
-    </button>
-    <div id="bahas-${idx}" class="hidden mt-1.5 bg-indigo-50/40 p-2 rounded-lg border-l-2 border-indigo-400 transition-all duration-300">
-        <p class="text-[11px] text-gray-600 leading-relaxed">${explanationText}</p>
-    </div>
-</div>
+                  <p class="font-bold text-gray-700 mb-1.5 text-xs">${q.type === 'essay' ? q.question_text.replace(/\[blank\]/g, '___') : q.question_text}</p>
+                  
+                  ${optionsHtml}
+                  
+                  <div class="mt-2">
+                      <button onclick="togglePembahasan(${idx})" class="w-full text-left bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-1.5 px-2.5 rounded-lg border border-indigo-100 text-[11px] flex justify-between items-center transition duration-150 cursor-pointer">
+                          <span>💡 Lihat Pembahasan</span>
+                          <span id="icon-bahas-${idx}" class="transition-transform duration-200 inline-block">&#9662;</span>
+                      </button>
+                      <div id="bahas-${idx}" class="hidden mt-1.5 bg-indigo-50/40 p-2 rounded-lg border-l-2 border-indigo-400 transition-all duration-300">
+                          <p class="text-[11px] text-gray-600 leading-relaxed">${explanationText}</p>
+                      </div>
+                  </div>
               `;
 
               reviewListContainer.appendChild(questionCard);
