@@ -32,16 +32,15 @@
             <div class="font-bold text-indigo-700 mb-1 flex items-center space-x-1 shrink-0">
                 <span>💡</span> <span>Materi & Pembahasan:</span>
             </div>
-            <div class="w-full text-gray-600 break-words">
-                <p id="modal-explanation" class="leading-relaxed"></p>
-            </div>
+            <div class="w-full text-gray-600 break-words" id="modal-explanation">
+                </div>
         </div>
         
         <div class="flex flex-col sm:flex-row gap-2.5 mt-3 w-full">
-            <button id="btn-pelajari" class="w-full sm:w-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition duration-200 cursor-pointer text-xs md:text-sm" onclick="showExplanationContent()">
+            <button id="btn-pelajari" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition duration-200 cursor-pointer text-xs md:text-sm" onclick="showExplanationContent()">
                 Pelajari Soal
             </button>
-            <button class="w-full sm:w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition duration-200 cursor-pointer text-xs md:text-sm" onclick="nextQuestion()">
+            <button class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition duration-200 cursor-pointer text-xs md:text-sm" onclick="nextQuestion()">
                 Next Soal &rarr;
             </button>
         </div>
@@ -56,7 +55,6 @@
                 <span class="text-[10px] text-indigo-500 font-bold uppercase tracking-widest mb-1">Skor Akhir</span>
                 <span id="completion-score-badge" class="text-5xl font-black text-indigo-600 leading-none">0</span>
             </div>
-            
             <div class="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-center justify-center text-center">
                 <p id="completion-desc-text" class="text-xs md:text-sm text-gray-700 font-medium leading-relaxed"></p>
             </div>
@@ -128,7 +126,6 @@
 
     <script>
       const quizData = @json($questions);
-      // Mengambil username/email peserta yang sedang login langsung dari Laravel
       const pesertaUsername = "{{ Auth::user()->email ?? Auth::user()->name }}"; 
 
       let currentQuestionIndex = 0;
@@ -371,12 +368,17 @@
           setTimeout(() => { showModal(status, q); }, 800);
       }
 
+      // =========================================================
+      // FUNGSI MODAL BARU: MERESPON STATUS is_show_explanation
+      // =========================================================
       function showModal(status, currentQuestion) {
         const modal = document.getElementById("result-modal");
         const modalBox = modal.querySelector('div');
         const statusText = document.getElementById("modal-status");
         
         const expBox = document.getElementById("explanation-container");
+        const btnPelajari = document.getElementById("btn-pelajari");
+
         expBox.classList.remove("flex");
         expBox.classList.add("hidden");
 
@@ -391,7 +393,21 @@
           statusText.className = "text-lg font-black mb-1 text-red-500";
         }
 
-        document.getElementById("modal-explanation").innerText = currentQuestion.explanation || "Tidak ada pembahasan spesifik untuk soal ini.";
+        // LOGIKA FITUR BARU: Cek Saklar Tampil/Sembunyi
+        // String '1' atau boolean true
+        if (currentQuestion.is_show_explanation == 1 || currentQuestion.is_show_explanation == true) {
+            btnPelajari.classList.remove("hidden");
+            
+            // Merangkai Teks Pembahasan + Link Video Jika Ada
+            let expContent = `<p>${currentQuestion.explanation || "Tidak ada teks pembahasan spesifik."}</p>`;
+            if (currentQuestion.explanation_link) {
+                expContent += `<div class="mt-3"><a href="${currentQuestion.explanation_link}" target="_blank" class="inline-flex items-center text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-lg text-xs font-bold transition">🎥 Tonton Video Referensi</a></div>`;
+            }
+            document.getElementById("modal-explanation").innerHTML = expContent;
+        } else {
+            // Sembunyikan Tombol Pelajari Sepenuhnya
+            btnPelajari.classList.add("hidden");
+        }
         
         modal.classList.remove("hidden");
         modal.classList.add("flex");
@@ -485,15 +501,12 @@
           }
       }
 
-      // === MERENDER SKOR DAN DESKRIPSI (LOGIKA BARU) ===
       function renderCompletionModalView(finalScore) {
           const completionModal = document.getElementById("quiz-completion-modal");
           const completionModalBox = completionModal.querySelector('div');
           
-          // 1. Tampilkan Angka Skor (Murni tanpa /100)
           document.getElementById("completion-score-badge").innerText = finalScore;
 
-          // 2. Set Deskripsi Sesuai Rentang Nilai
           let descText = "";
           let userHighlight = `<strong class="text-indigo-600">${pesertaUsername}</strong>`;
           
@@ -509,7 +522,6 @@
           
           document.getElementById("completion-desc-text").innerHTML = descText;
 
-          // 3. Render Ulang Review (Logika Lama Tetap Aman)
           const reviewListContainer = document.getElementById("completion-review-list");
           reviewListContainer.innerHTML = ""; 
 
@@ -586,7 +598,28 @@
                   optionsHtml = `<div class="space-y-0.5 bg-white p-2 rounded-lg border border-gray-100/70 text-[11px]">${optionsHtml}</div>`;
               }
 
-              const explanationText = q.explanation ? q.explanation : "Pembahasan belum tersedia untuk soal ini.";
+              // ==============================================================
+              // RENDER REVIEW LIST: MERESPON is_show_explanation
+              // ==============================================================
+              let explanationSection = '';
+              if (q.is_show_explanation == 1 || q.is_show_explanation == true) {
+                  let expText = `<p>${q.explanation || "Pembahasan belum tersedia untuk soal ini."}</p>`;
+                  if (q.explanation_link) {
+                      expText += `<div class="mt-2"><a href="${q.explanation_link}" target="_blank" class="inline-flex items-center text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-2 py-1 rounded text-[10px] font-bold transition">🎥 Tonton Video Referensi</a></div>`;
+                  }
+
+                  explanationSection = `
+                      <div class="mt-2">
+                          <button onclick="togglePembahasan(${idx})" class="w-full text-left bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-1.5 px-2.5 rounded-lg border border-indigo-100 text-[11px] flex justify-between items-center transition duration-150 cursor-pointer">
+                              <span>💡 Lihat Pembahasan</span>
+                              <span id="icon-bahas-${idx}" class="transition-transform duration-200 inline-block">&#9662;</span>
+                          </button>
+                          <div id="bahas-${idx}" class="hidden mt-1.5 bg-indigo-50/40 p-2 rounded-lg border-l-2 border-indigo-400 transition-all duration-300">
+                              <div class="text-[11px] text-gray-600 leading-relaxed">${expText}</div>
+                          </div>
+                      </div>
+                  `;
+              }
 
               questionCard.innerHTML = `
                   <div class="flex justify-between items-center border-b border-gray-200 pb-1.5 mb-1.5">
@@ -600,15 +633,7 @@
                   
                   ${optionsHtml}
                   
-                  <div class="mt-2">
-                      <button onclick="togglePembahasan(${idx})" class="w-full text-left bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-1.5 px-2.5 rounded-lg border border-indigo-100 text-[11px] flex justify-between items-center transition duration-150 cursor-pointer">
-                          <span>💡 Lihat Pembahasan</span>
-                          <span id="icon-bahas-${idx}" class="transition-transform duration-200 inline-block">&#9662;</span>
-                      </button>
-                      <div id="bahas-${idx}" class="hidden mt-1.5 bg-indigo-50/40 p-2 rounded-lg border-l-2 border-indigo-400 transition-all duration-300">
-                          <p class="text-[11px] text-gray-600 leading-relaxed">${explanationText}</p>
-                      </div>
-                  </div>
+                  ${explanationSection}
               `;
 
               reviewListContainer.appendChild(questionCard);

@@ -13,31 +13,47 @@ use Illuminate\Support\Facades\Storage;
 
 class AdminQuizController extends Controller
 {
-    // 1. Menampilkan semua kuis yang ada
-    public function index()
+public function index()
     {
-        $quizzes = Quiz::latest()->get();
+        $user = auth()->user();
+
+        // JIKA SUPER ADMIN: Tampilkan semua kuis yang ada di sistem
+        if ($user->role === 'super_admin') {
+            $quizzes = Quiz::latest()->get();
+        } else {
+            // JIKA ADMIN INSTANSI: Hanya tampilkan kuis yang dibuat oleh akun dia sendiri
+            $quizzes = Quiz::where('created_by', $user->id)->latest()->get();
+        }
+
         return view('admin.quiz.index', compact('quizzes'));
     }
 
-    // 2. Menyimpan Kuis Baru
+    // 2. Menyimpan Kuis Baru dengan Label Akses Tier
     public function storeQuiz(Request $request)
     {
+        $user = auth()->user();
+
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            // Validasi tier_access wajib diisi jika dia Super Admin
+            'tier_access' => 'required_if:auth_role,super_admin|in:basic,premium,all',
         ]);
+
+        // Tentukan tier access secara otomatis
+        // Jika Super Admin, ambil dari input form. Jika Admin Instansi, set default 'all' (atau otomatis 'instansi')
+        $tierAccess = ($user->role === 'super_admin') ? $request->tier_access : 'all';
 
         Quiz::create([
             'title' => $request->title,
             'description' => $request->description,
-            'created_by' => Auth::id(), // ID Admin yang sedang login
+            'created_by' => $user->id, 
+            'tier_access' => $tierAccess, // 👈 Kolom baru database tersimpan disini
         ]);
 
         return redirect()->back()->with('success', 'Kuis baru berhasil dibuat!');
     }
 
-    // 3. Menampilkan Halaman Kelola Soal berdasarkan Kuis tertentu
     public function showQuestions(Quiz $quiz)
     {
         $questions = Question::where('quiz_id', $quiz->id)->oldest()->get();
@@ -46,14 +62,12 @@ class AdminQuizController extends Controller
         return view('admin.quiz.questions', compact('quiz', 'questions', 'bankSoalList'));
     }
 
-    // 4. Logika Menyalin Soal dari Bank Soal ke Tabel Questions Kuis
     public function pullFromBankSoal(Request $request, Quiz $quiz)
     {
         $request->validate([
             'bank_part_id' => 'required|exists:bank_parts,id'
         ]);
 
-        // Ambil semua soal yang ada di dalam Part Bank Soal yang dipilih admin
         $bankQuestions = BankQuestion::where('bank_part_id', $request->bank_part_id)->get();
 
         if ($bankQuestions->isEmpty()) {
@@ -62,23 +76,25 @@ class AdminQuizController extends Controller
 
         $copiedCount = 0;
         foreach ($bankQuestions as $bq) {
-            // Cek duplikasi: Agar soal yang sama dari part ini tidak masuk dua kali ke kuis ini
             $exists = Question::where('quiz_id', $quiz->id)
                 ->where('question_text', $bq->question_text)
                 ->exists();
 
             if (!$exists) {
-                // Salin record dari tabel bank_questions ke tabel questions milik kuis
                 Question::create([
                     'quiz_id' => $quiz->id,
-                    'type' => $bq->type, // ✔️ PASTIKAN TIPE SOAL IKUT TERSALIN
+                    'type' => $bq->type, 
                     'bank_part_id' => $bq->bank_part_id,
                     'question_text' => $bq->question_text,
                     'image' => $bq->image,
                     'audio' => $bq->audio,
-                    'options' => $bq->options, // Data array akan aman karena cast otomatis
+                    'options' => $bq->options, 
                     'correct_answer' => $bq->correct_answer,
-                    'explanation' => $bq->explanation
+                    
+                    // SALIN FITUR PEMBAHASAN JUGA
+                    'explanation' => $bq->explanation,
+                    'explanation_link' => $bq->explanation_link,
+                    'is_show_explanation' => $bq->is_show_explanation ?? true
                 ]);
                 $copiedCount++;
             }
@@ -87,73 +103,74 @@ class AdminQuizController extends Controller
         return redirect()->back()->with('success', "Berhasil menarik {$copiedCount} soal dari Bank Soal ke dalam kuis ini!");
     }
 
-    // 5. Menyimpan Soal Baru ke dalam Kuis (Input Manual)
     public function storeQuestion(Request $request, Quiz $quiz)
     {
-        // ✔️ VALIDASI DINAMIS BERDASARKAN TIPE SOAL
         $request->validate([
             'type' => 'required|in:multiple_choice,essay',
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
-            'explanation' => 'nullable|string',
             
-            // Aturan khusus Pilihan Ganda
+            // VALIDASI BARU
+            'explanation' => 'nullable|string',
+            'explanation_link' => 'nullable|url',
+            'is_show_explanation' => 'required|boolean',
+            
             'option_a' => 'required_if:type,multiple_choice',
             'option_b' => 'required_if:type,multiple_choice',
             'option_c' => 'required_if:type,multiple_choice',
             'option_d' => 'required_if:type,multiple_choice',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
             
-            // Aturan khusus Essay
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
         ]);
 
         $imagePath = $request->hasFile('image') ? $request->file('image')->store('questions/images', 'public') : null;
         $audioPath = $request->hasFile('audio') ? $request->file('audio')->store('questions/audios', 'public') : null;
 
-        // ✔️ LOGIKA PEMISAHAN DATA OPTIONS & KUNCI JAWABAN
         $options = [];
         $correctAnswer = null;
 
         if ($request->type === 'multiple_choice') {
             $options = [
-                'A' => $request->option_a,
-                'B' => $request->option_b,
-                'C' => $request->option_c,
-                'D' => $request->option_d,
+                'A' => $request->option_a, 'B' => $request->option_b, 'C' => $request->option_c, 'D' => $request->option_d,
             ];
             $correctAnswer = $request->correct_answer_mc;
         } else {
-            // Mode Essay: pecah dengan koma lalu jadikan JSON array
             $answersArray = array_map('trim', explode(',', $request->correct_answer_essay));
             $correctAnswer = json_encode($answersArray);
         }
 
         Question::create([
             'quiz_id' => $quiz->id,
-            'type' => $request->type, // Simpan tipe soal
+            'type' => $request->type, 
             'question_text' => $request->question_text,
             'image' => $imagePath,
             'audio' => $audioPath,
-            'options' => $options, // Jika essay, ini akan terisi array kosong []
+            'options' => $options, 
             'correct_answer' => $correctAnswer,
+            
+            // SIMPAN DATA BARU
             'explanation' => $request->explanation,
+            'explanation_link' => $request->explanation_link,
+            'is_show_explanation' => $request->is_show_explanation,
         ]);
 
         return redirect()->back()->with('success', 'Soal bermedia berhasil ditambahkan!');
     }
 
-    // 6. Update Soal Kuis
     public function updateQuestion(Request $request, Question $question)
     {
-        // ✔️ VALIDASI DINAMIS BERDASARKAN TIPE SOAL (Sama seperti Store)
         $request->validate([
             'type' => 'required|in:multiple_choice,essay',
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
+            
+            // VALIDASI BARU
             'explanation' => 'nullable|string',
+            'explanation_link' => 'nullable|url',
+            'is_show_explanation' => 'required|boolean',
             
             'option_a' => 'required_if:type,multiple_choice',
             'option_b' => 'required_if:type,multiple_choice',
@@ -164,7 +181,6 @@ class AdminQuizController extends Controller
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
         ]);
 
-        // Proses Logika Media (Hapus via Checkbox)
         if ($request->has('delete_image') && !$request->hasFile('image')) {
             if ($question->image) {
                 Storage::disk('public')->delete($question->image);
@@ -178,7 +194,6 @@ class AdminQuizController extends Controller
             }
         }
 
-        // Proses Logika Media (Ganti Baru)
         if ($request->hasFile('image')) {
             if ($question->image) {
                 Storage::disk('public')->delete($question->image);
@@ -192,16 +207,12 @@ class AdminQuizController extends Controller
             $question->audio = $request->file('audio')->store('questions/audios', 'public');
         }
 
-        // ✔️ LOGIKA PEMISAHAN DATA OPTIONS & KUNCI JAWABAN
         $options = [];
         $correctAnswer = null;
 
         if ($request->type === 'multiple_choice') {
             $options = [
-                'A' => $request->option_a,
-                'B' => $request->option_b,
-                'C' => $request->option_c,
-                'D' => $request->option_d,
+                'A' => $request->option_a, 'B' => $request->option_b, 'C' => $request->option_c, 'D' => $request->option_d,
             ];
             $correctAnswer = $request->correct_answer_mc;
         } else {
@@ -209,19 +220,21 @@ class AdminQuizController extends Controller
             $correctAnswer = json_encode($answersArray);
         }
 
-        // Update Text dan Array
         $question->type = $request->type;
         $question->question_text = $request->question_text;
         $question->options = $options;
         $question->correct_answer = $correctAnswer;
+        
+        // UPDATE DATA BARU
         $question->explanation = $request->explanation;
+        $question->explanation_link = $request->explanation_link;
+        $question->is_show_explanation = $request->is_show_explanation;
         
         $question->save();
 
         return redirect()->back()->with('success', 'Soal berhasil diperbarui!');
     }
 
-    // 7. Menghapus Soal Beserta File Medianya dari Hardisk
     public function destroyQuestion(Question $question)
     {
         if ($question->image) {
@@ -236,7 +249,6 @@ class AdminQuizController extends Controller
         return redirect()->back()->with('success', 'Soal berhasil dihapus dari kuis!');
     }
 
-    // 8. Menghapus Kuis Keseluruhan
     public function destroyQuiz(Quiz $quiz)
     {
         $quiz->delete();

@@ -11,20 +11,40 @@ use App\Models\Question;
 class PesertaController extends Controller
 {
     // 1. Dashboard Utama Peserta (Dibatasi maksimal 3 data kuis terbaru)
-    public function index()
-    {
-        // Ambil kuis yang tersedia, urutkan dari yang terbaru, lalu batasi hanya 3 data saja
-        $quizzes = Quiz::latest()->take(3)->get();
+public function index()
+{
+    $user = auth()->user();
+    
+    // Asumsi ID Super Admin Pusat adalah 1. Sesuaikan jika berbeda di DB.
+    $superAdminId = 1; 
 
-        // Ambil riwayat kuis (sementara biarkan ambil semua, nanti kita urus di tahap berikutnya)
-        $history = QuizResult::where('user_id', Auth::id())
-            ->with('quiz')
-            ->latest()
-            ->take(3)
-            ->get();
-
-        return view('peserta.dashboard', compact('quizzes', 'history'));
+    // 1. FILTER QUIS (Logika Tahap 6)
+    if ($user->instansi_id !== null) {
+        $quizzes = Quiz::where('created_by', $user->instansi_id)
+                       ->latest()
+                       ->get();
+    } elseif ($user->subscription === 'siswa_premium') {
+        $quizzes = Quiz::where('created_by', $superAdminId)
+                       ->latest()
+                       ->get();
+    } else {
+        $quizzes = Quiz::where('created_by', $superAdminId)
+                       ->whereIn('tier_access', ['basic', 'all'])
+                       ->latest()
+                       ->get();
     }
+
+    // 2. AMBIL DATA RIWAYAT (Untuk mengatasi Error Undefined Variable $history)
+    // Asumsi kamu punya model QuizResult atau nama tabel sejenis untuk menyimpan hasil ujian.
+    // Silakan sesuaikan nama model di bawah ini dengan model riwayat kuis asli milikmu (misal: QuizResult atau History).
+    $history = \App\Models\QuizResult::where('user_id', $user->id)
+                                     ->with('quiz') // Eager load relasi kuisnya agar title kuis terbaca
+                                     ->latest()
+                                     ->get();
+
+    // Kirim kedua variabel ke view kuis
+    return view('peserta.dashboard', compact('quizzes', 'history'));
+}
 
     // 2. Halaman Baru: Menampilkan SELURUH Kuis Tanpa Batasan (Poin 1)
     public function allQuizzes()

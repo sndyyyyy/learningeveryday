@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Peserta - Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        body { font-family: 'Poppins', sans-serif; }
         @keyframes wave {
             0%, 100% { transform: rotate(0deg); }
             25% { transform: rotate(-15deg); }
@@ -18,7 +22,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans pb-16">
+<body class="bg-gray-100 pb-16">
 
     @include('layouts.navbar-peserta')
 
@@ -40,7 +44,7 @@
     <div class="max-w-6xl mx-auto mt-6 px-4 space-y-10">
 
         <!-- ===================================================
-             SECTION 0: BANNER WELCOME (BARU)
+             SECTION 0: BANNER WELCOME
              =================================================== -->
         <div class="relative bg-gradient-to-r from-indigo-600 to-blue-500 rounded-2xl p-6 md:p-8 shadow-lg text-white overflow-hidden flex flex-col justify-center min-h-[140px]">
             <!-- Ornamen Dekorasi Background -->
@@ -48,9 +52,9 @@
             <div class="absolute bottom-0 right-1/4 w-24 h-24 bg-white opacity-10 rounded-full blur-xl pointer-events-none"></div>
             
             <div class="relative z-10 w-full">
-                <!-- Sapaan Dinamis menggunakan Email/Username -->
+                <!-- Sapaan diubah menggunakan Nama Lengkap agar lebih personal -->
                 <h1 class="text-2xl md:text-3xl font-black mb-2 flex items-center gap-2 tracking-tight">
-                    Hai, {{ Auth::user()->email }}! <span class="animate-wave text-3xl">👋</span>
+                    Hai, {{ Auth::user()->name }}! <span class="animate-wave text-3xl">👋</span>
                 </h1>
                 
                 <p class="text-indigo-100 text-xs md:text-sm leading-relaxed max-w-2xl font-medium">
@@ -74,7 +78,27 @@
                 @forelse($quizzes as $quiz)
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between transition duration-300 hover:shadow-md hover:-translate-y-1">
                         <div>
-                            <span class="bg-blue-50 text-blue-700 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">Kuis Aktif</span>
+                            <!-- DYNAMIC TIER ACCESS BADGE DI SISI PESERTA -->
+                            @if(auth()->user()->instansi_id !== null)
+                                <span class="bg-purple-50 text-purple-700 border border-purple-100 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">
+                                    🏫 Tugas Instansi
+                                </span>
+                            @else
+                                @if($quiz->tier_access === 'premium')
+                                    <span class="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">
+                                        👑 Premium
+                                    </span>
+                                @elseif($quiz->tier_access === 'basic')
+                                    <span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">
+                                        🟢 Basic
+                                    </span>
+                                @else
+                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">
+                                        🌍 Akses Umum
+                                    </span>
+                                @endif
+                            @endif
+
                             <h3 class="font-bold text-gray-800 text-base mt-3 leading-snug">{{ $quiz->title }}</h3>
                             <p class="text-gray-400 text-xs mt-1.5 line-clamp-2 leading-relaxed">{{ $quiz->description ?? 'Tidak ada deskripsi untuk kuis ini.' }}</p>
                         </div>
@@ -88,7 +112,7 @@
                 @empty
                     <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-100 text-center col-span-full">
                         <div class="text-4xl mb-3">📭</div>
-                        <p class="text-gray-500 text-sm font-medium">Belum ada kuis yang dirilis oleh admin saat ini.</p>
+                        <p class="text-gray-500 text-sm font-medium">Belum ada kuis yang tersedia untuk paket akun Anda saat ini.</p>
                     </div>
                 @endforelse
             </div>

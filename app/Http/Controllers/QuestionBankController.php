@@ -26,6 +26,19 @@ class QuestionBankController extends Controller
         return redirect()->back()->with('success', 'Wadah Bank Soal berhasil dibuat!');
     }
 
+    public function updateBank(Request $request, QuestionBank $bank)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255'
+        ]);
+
+        $bank->update([
+            'name' => $request->name
+        ]);
+
+        return redirect()->back()->with('success', 'Nama Kategori Bank Soal berhasil diperbarui!');
+    }
+
     // Menghapus Bank Soal permanen beserta isinya (cascade)
     public function destroyBank(QuestionBank $bank)
     {
@@ -52,6 +65,19 @@ class QuestionBankController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Part baru berhasil ditambahkan!');
+    }
+
+    public function updatePart(Request $request, BankPart $part)
+    {
+        $request->validate([
+            'part_name' => 'required|string|max:255'
+        ]);
+
+        $part->update([
+            'part_name' => $request->part_name
+        ]);
+
+        return redirect()->back()->with('success', 'Nama Part Bank Soal berhasil diperbarui!');
     }
 
     // Menghapus Part

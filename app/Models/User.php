@@ -37,5 +37,10 @@ class User extends Authenticatable
         'password',
         'raw_password',
         'role',
+        'subscription',    
+        'account_status',  
+        'instansi_id',     
     ];
+
+    
 }

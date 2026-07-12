@@ -45,7 +45,7 @@
                         <label class="block text-gray-600 text-[11px] font-semibold mb-1">Tipe Soal</label>
                         <select name="type" id="in-type" onchange="toggleQuestionType()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 bg-indigo-50 font-bold text-indigo-700">
                             <option value="multiple_choice">🔘 Pilihan Ganda (A, B, C, D)</option>
-                            <option value="essay">📝 Isian Rumpang / Essay</option>
+                            <option value="essay">📝 Essay</option>
                         </select>
                     </div>
 
@@ -95,7 +95,7 @@
                     </div>
 
                     <div id="container-essay" class="hidden mt-2 bg-amber-50 p-3 rounded-lg border border-amber-200">
-                        <label class="block text-amber-800 text-[11px] font-bold mb-1">Kunci Jawaban Isian Rumpang</label>
+                        <label class="block text-amber-800 text-[11px] font-bold mb-1">Kunci Jawaban Essay</label>
                         <p class="text-[10px] text-amber-600 mb-2 leading-relaxed">Masukkan jawaban berurutan sesuai jumlah kata <b>[blank]</b>. Pisahkan dengan koma (,).<br>Contoh: <b>Jakarta, 1945</b></p>
                         <input type="text" name="correct_answer_essay" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-xs focus:outline-none focus:border-amber-500 bg-white" placeholder="Jawaban 1, Jawaban 2...">
                     </div>
@@ -121,7 +121,7 @@
         <p class="font-bold text-gray-700 mb-1">Format kolom berurutan: <span class="text-indigo-600">Soal, Opsi A, Opsi B, Opsi C, Opsi D, Jawaban Benar, Pembahasan.</span></p>
         <ul class="list-disc pl-4 text-gray-500 space-y-0.5">
             <li><b>Pilihan Ganda:</b> Isi lengkap opsi A-D. Kolom Jawaban Benar isi dengan huruf A/B/C/D.</li>
-            <li><b>Essay / Rumpang:</b> Kosongkan kolom Opsi A-D (atau isi tanda strip <code class="bg-gray-200 px-1 rounded">-</code>). Kolom Jawaban Benar isi dengan teks jawaban dipisah koma (contoh: <i>Jakarta, 1945</i>). Sisipkan <b>[blank]</b> pada teks soal.</li>
+            <li><b>Essay:</b> Kosongkan kolom Opsi A-D (atau isi tanda strip <code class="bg-gray-200 px-1 rounded">-</code>). Kolom Jawaban Benar isi dengan teks jawaban dipisah koma (contoh: <i>Jakarta, 1945</i>). Sisipkan <b>[blank]</b> pada teks soal.</li>
         </ul>
     </div>
     
@@ -148,7 +148,7 @@
                         <div class="flex justify-between items-start gap-4 mb-2">
                             <div class="flex-1">
                                 <span class="text-[9px] px-2 py-0.5 rounded border mb-1.5 inline-block font-bold uppercase tracking-wider {{ $q->type === 'essay' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-blue-50 text-blue-600 border-blue-200' }}">
-                                    {{ $q->type === 'essay' ? '📝 Isian Rumpang' : '🔘 Pilihan Ganda' }}
+                                    {{ $q->type === 'essay' ? '📝 Essay' : '🔘 Pilihan Ganda' }}
                                 </span>
                                 <p class="font-semibold text-gray-800 text-sm leading-relaxed">
                                     <span class="text-indigo-600 font-bold">{{ $index + 1 }}.</span> {{ $q->question_text }}
@@ -248,13 +248,13 @@
                     <label class="block text-gray-600 text-[11px] font-semibold mb-1">Tipe Soal</label>
                     <select name="type" id="edit_type" onchange="toggleEditQuestionType()" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 bg-indigo-50 font-bold text-indigo-700">
                         <option value="multiple_choice">🔘 Pilihan Ganda (A, B, C, D)</option>
-                        <option value="essay">📝 Isian Rumpang / Essay</option>
+                        <option value="essay">📝 Essay</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-gray-600 text-[11px] font-semibold mb-1">Pertanyaan / Soal</label>
-                    <p id="edit_hint_essay" class="hidden text-[10px] text-amber-600 mb-1 font-medium">💡 Gunakan kata <b>[blank]</b> untuk menandai rumpang.</p>
+                    <p id="edit_hint_essay" class="hidden text-[10px] text-amber-600 mb-1 font-medium">💡 Gunakan kata <b>[blank]</b> untuk menandai bagian yang perlu diisi.</p>
                     <textarea name="question_text" id="edit_question_text" rows="3" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none"></textarea>
                 </div>
                 
@@ -307,7 +307,7 @@
                 </div>
 
                 <div id="edit_container_essay" class="hidden bg-amber-50 p-3 rounded-lg border border-amber-200">
-                    <label class="block text-amber-800 text-[11px] font-bold mb-1">Kunci Jawaban Isian Rumpang</label>
+                    <label class="block text-amber-800 text-[11px] font-bold mb-1">Kunci Jawaban Essay</label>
                     <p class="text-[10px] text-amber-600 mb-2 leading-relaxed">Pisahkan jawaban dengan koma (,). Contoh: <b>Jakarta, 1945</b></p>
                     <input type="text" name="correct_answer_essay" id="edit_correct_answer_essay" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-xs focus:outline-none focus:border-amber-500 bg-white">
                 </div>

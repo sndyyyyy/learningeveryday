@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kelola Part - {{ $bank->name }}</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        /* FIX: Menambahkan deklarasi keyframes agar animasi pop-up modal bekerja mulus */
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans">
 
@@ -62,16 +67,26 @@
                                         {{ $part->questions_count }} Soal
                                     </span>
                                 </td>
-                                <td class="py-3.5 px-3 text-center space-x-2">
-                                    <a href="{{ route('admin.bank.questions', $part->id) }}" class="text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-md text-xs font-bold transition cursor-pointer">
-                                        Isi Soal &rarr;
-                                    </a>
-                                    <form action="{{ route('admin.bank.parts.destroy', $part->id) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus Part ini beserta seluruh soal di dalamnya?')" class="inline">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 px-2 py-1 rounded-md transition cursor-pointer">
-                                            Hapus
+                                <td class="py-3.5 px-3">
+                                    <div class="flex flex-wrap items-center justify-center gap-2">
+                                        <a href="{{ route('admin.bank.questions', $part->id) }}" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1.5 rounded-md text-xs font-bold transition cursor-pointer whitespace-nowrap inline-block">
+                                            Isi Soal &rarr;
+                                        </a>
+                                        
+                                        <button onclick="openEditPartModal('{{ $part->id }}', '{{ $part->part_name }}')" class="text-amber-600 hover:text-amber-800 bg-amber-50 px-2.5 py-1.5 rounded-md text-xs font-bold transition cursor-pointer whitespace-nowrap inline-block">
+                                            Edit
                                         </button>
-                                    </form>
+
+                                        <form id="form-delete-part-{{ $part->id }}" action="{{ route('admin.bank.parts.destroy', $part->id) }}" method="POST" class="inline-block">
+                                            @csrf 
+                                            @method('DELETE')
+                                            <button type="button" 
+                                                    onclick="triggerCustomDeleteModal('form-delete-part-{{ $part->id }}', '{{ $part->part_name }}')" 
+                                                    class="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 px-2.5 py-1.5 rounded-md transition cursor-pointer whitespace-nowrap">
+                                                Hapus
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -85,5 +100,108 @@
         </div>
 
     </div>
+
+    <!-- MODAL POP UP: EDIT SUB-PART -->
+    <div id="edit-part-modal" class="fixed top-0 left-0 w-full h-full bg-black/60 hidden justify-center items-center z-50 backdrop-blur-xs transition-all duration-300">
+        <div class="bg-white p-6 rounded-2xl max-w-sm w-[90%] shadow-2xl flex flex-col animate-fade-in">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
+                <h3 class="text-base font-bold text-gray-800 flex items-center gap-1">
+                    <span>✏️</span> Ubah Sub-Part Soal
+                </h3>
+                <button onclick="closeEditPartModal()" class="text-gray-400 hover:text-gray-600 font-bold cursor-pointer text-lg">&times;</button>
+            </div>
+            
+            <form id="edit-part-form" method="POST" class="space-y-4 text-left">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label class="block text-gray-600 text-xs font-semibold mb-1">Nama Part Baru</label>
+                    <input type="text" id="edit-part-input" name="part_name" required
+                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-medium text-gray-800">
+                </div>
+                
+                <div class="flex flex-row gap-2 w-full pt-1">
+                    <button type="button" class="w-1/2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 rounded-xl text-xs cursor-pointer transition" onclick="closeEditPartModal()">
+                        Batal
+                    </button>
+                    <button type="submit" class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs cursor-pointer transition">
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL POP UP: GLOBAL KONFIRMASI HAPUS -->
+    <div id="custom-delete-modal" class="fixed top-0 left-0 w-full h-full bg-black/60 hidden justify-center items-center z-[60] backdrop-blur-xs transition-all duration-300">
+        <div class="bg-white p-6 rounded-2xl max-w-sm w-[90%] text-center shadow-2xl animate-fade-in flex flex-col">
+            
+            <div class="w-14 h-14 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            
+            <h3 class="text-base font-bold text-gray-800 mb-1">Hapus Part Soal?</h3>
+            <!-- FIX: Mengubah teks deskripsi dari kata 'kategori' menjadi 'part' agar kontekstual -->
+            <p class="text-xs text-gray-400 mb-5 leading-relaxed">
+                Apakah Anda yakin ingin menghapus part <span id="delete-target-name" class="text-red-600 font-bold"></span> beserta seluruh susunan soal di dalamnya? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            
+            <div class="flex flex-row gap-2 w-full">
+                <button type="button" 
+                        class="w-1/2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2.5 rounded-xl text-xs cursor-pointer transition" 
+                        onclick="closeCustomDeleteModal()">
+                    Batal
+                </button>
+                <button type="button" 
+                        class="w-1/2 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-xs cursor-pointer transition shadow-xs" 
+                        onclick="executeFormDelete()">
+                    Ya, Hapus Permanen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let activeDeleteFormId = null;
+
+        function triggerCustomDeleteModal(formId, targetName) {
+            activeDeleteFormId = formId;
+            document.getElementById('delete-target-name').innerText = targetName;
+            
+            const modal = document.getElementById('custom-delete-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeCustomDeleteModal() {
+            const modal = document.getElementById('custom-delete-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+            activeDeleteFormId = null;
+        }
+
+        function executeFormDelete() {
+            if (activeDeleteFormId) {
+                document.getElementById(activeDeleteFormId).submit();
+            }
+        }
+
+        function openEditPartModal(id, currentPartName) {
+            const modal = document.getElementById('edit-part-modal');
+            document.getElementById('edit-part-form').action = "/admin/bank/parts/" + id + "/update";
+            document.getElementById('edit-part-input').value = currentPartName;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => { document.getElementById('edit-part-input').focus(); }, 50);
+        }
+
+        function closeEditPartModal() {
+            const modal = document.getElementById('edit-part-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+    </script>
 </body>
 </html>

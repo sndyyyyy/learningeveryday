@@ -34,18 +34,42 @@
         </div>
 
         <div class="hidden md:flex space-x-8 items-center">
-            <a href="{{ route('admin.dashboard') }}" 
-               class="{{ Request::routeIs('admin.dashboard') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
-               Kelola Peserta
-            </a>
-            <a href="{{ route('admin.bank.index') }}"
-               class="{{ Request::routeIs('admin.bank.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
-               Bank Soal
-            </a>
-            <a href="{{ route('admin.quiz.index') }}" 
-               class="{{ Request::routeIs('admin.quiz.index') || Request::routeIs('admin.quiz.questions') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
-               Kelola Kuis
-            </a>
+            <!-- ===================================================
+                 NAVBAR TOP DESKTOP: FILTER PERAN SECARA KETAT
+                 =================================================== -->
+            @if(auth()->user()->role === 'super_admin')
+                <a href="{{ route('admin.dashboard') }}" 
+                   class="{{ Request::routeIs('admin.dashboard') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+                   Kelola Peserta
+                </a>
+                <a href="{{ route('admin.bank.index') }}"
+                   class="{{ Request::routeIs('admin.bank.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+                   Bank Soal
+                </a>
+                <a href="{{ route('admin.quiz.index') }}" 
+                   class="{{ Request::routeIs('admin.quiz.index') || Request::routeIs('admin.quiz.questions') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+                   Kelola Kuis
+                </a>
+                <a href="{{ route('admin.approval.index') }}" 
+                   class="{{ Request::routeIs('admin.approval.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+                   Persetujuan Akun
+                </a>
+            @endif
+
+            @if(auth()->user()->role === 'admin')
+                <a href="{{ route('admin.bank.index') }}"
+                   class="{{ Request::routeIs('admin.bank.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+                   Bank Soal
+                </a>
+                <a href="{{ route('admin.quiz.index') }}" 
+                   class="{{ Request::routeIs('admin.quiz.index') || Request::routeIs('admin.quiz.questions') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+                   Kelola Kuis
+                </a>
+                <a href="{{ route('admin.students.index') }}" 
+                   class="{{ Request::routeIs('admin.students.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+                   Kelola Siswa
+                </a>
+            @endif
         </div>
     </div>
 
@@ -75,27 +99,59 @@
     </div>
     
     <div class="flex-1 p-4 space-y-2">
-        <a href="{{ route('admin.dashboard') }}" 
-           class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.dashboard') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-2.533-4.656 6.953 6.953 0 0 1-2.212-3.153 4.908 4.908 0 0 1-1.653-.739 4.125 4.125 0 0 0-1.828 3.307 10.56 10.56 0 0 1-1.258 5.485ZM3 19.128a9.38 9.38 0 0 1 2.625.372 9.337 9.337 0 0 1 4.121-.952 4.125 4.125 0 0 1-2.533-4.656 6.953 6.953 0 0 0-2.212-3.153 4.908 4.908 0 0 0-1.653-.739 4.125 4.125 0 0 1-1.828 3.307 10.56 10.56 0 0 0-1.258 5.485ZM12 11.25a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
-            </svg>
-            <span>Kelola Peserta</span>
-        </a>
+        <!-- ===================================================
+             SIDEBAR MOBILE DRAWER: FILTER PERAN SECARA KETAT
+             =================================================== -->
+        @if(auth()->user()->role === 'super_admin')
+            <a href="{{ route('admin.dashboard') }}" 
+               class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.dashboard') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-2.533-4.656 6.953 6.953 0 0 1-2.212-3.153 4.908 4.908 0 0 1-1.653-.739 4.125 4.125 0 0 0-1.828 3.307 10.56 10.56 0 0 1-1.258 5.485ZM3 19.128a9.38 9.38 0 0 1 2.625.372 9.337 9.337 0 0 1 4.121-.952 4.125 4.125 0 0 1-2.533-4.656 6.953 6.953 0 0 0-2.212-3.153 4.908 4.908 0 0 0-1.653-.739 4.125 4.125 0 0 1-1.828 3.307 10.56 10.56 0 0 0-1.258 5.485ZM12 11.25a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
+                </svg>
+                <span>Kelola Peserta</span>
+            </a>
+            <a href="{{ route('admin.bank.index') }}" 
+                class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.bank.*') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.008 1.24l.885 1.77a2.25 2.25 0 0 0 2.007 1.24h1.98a2.25 2.25 0 0 0 2.007-1.24l.885-1.77a2.25 2.25 0 0 1 2.007-1.24h3.86m-18 0h18M2.25 13.5a2.25 2.25 0 0 1 2.25-2.25h15a2.25 2.25 0 0 1 2.25 2.25m-19.5 0v5.25a2.25 2.25 0 0 0 2.25 2.25h15a2.25 2.25 0 0 0 2.25-2.25V13.5m-16.5-9h13.5M9 7.5h6" /></svg>
+                <span>Bank Soal</span>
+            </a>
+            <a href="{{ route('admin.quiz.index') }}" 
+               class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.quiz.index') || Request::routeIs('admin.quiz.questions') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.174c-.053-.462.312-.85.778-.85h13.924c.466 0 .83.388.778.85a49.52 49.52 0 0 1-15.48 0ZM19.5 10.174v6.72a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 16.894v-6.72M12 2.25l8.625 4.5L12 11.25l-8.625-4.5L12 2.25Z" />
+                </svg>
+                <span>Kelola Kuis</span>
+            </a>
+            <a href="{{ route('admin.approval.index') }}" 
+               class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.approval.*') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" />
+                </svg>
+                <span>Persetujuan Akun</span>
+            </a>
+        @endif
 
-        <a href="{{ route('admin.bank.index') }}" 
-            class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.bank.*') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.008 1.24l.885 1.77a2.25 2.25 0 0 0 2.007 1.24h1.98a2.25 2.25 0 0 0 2.007-1.24l.885-1.77a2.25 2.25 0 0 1 2.007-1.24h3.86m-18 0h18M2.25 13.5a2.25 2.25 0 0 1 2.25-2.25h15a2.25 2.25 0 0 1 2.25 2.25m-19.5 0v5.25a2.25 2.25 0 0 0 2.25 2.25h15a2.25 2.25 0 0 0 2.25-2.25V13.5m-16.5-9h13.5M9 7.5h6" /></svg>
-            <span>Bank Soal</span>
-        </a>
-        
-        <a href="{{ route('admin.quiz.index') }}" 
-           class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.quiz.index') || Request::routeIs('admin.quiz.questions') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.174c-.053-.462.312-.85.778-.85h13.924c.466 0 .83.388.778.85a49.52 49.52 0 0 1-15.48 0ZM19.5 10.174v6.72a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 16.894v-6.72M12 2.25l8.625 4.5L12 11.25l-8.625-4.5L12 2.25Z" />
-            </svg>
-            <span>Kelola Kuis</span>
-        </a>
+        @if(auth()->user()->role === 'admin')
+            <a href="{{ route('admin.bank.index') }}" 
+                class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.bank.*') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.008 1.24l.885 1.77a2.25 2.25 0 0 0 2.007 1.24h1.98a2.25 2.25 0 0 0 2.007-1.24l.885-1.77a2.25 2.25 0 0 1 2.007-1.24h3.86m-18 0h18M2.25 13.5a2.25 2.25 0 0 1 2.25-2.25h15a2.25 2.25 0 0 1 2.25 2.25m-19.5 0v5.25a2.25 2.25 0 0 0 2.25 2.25h15a2.25 2.25 0 0 0 2.25-2.25V13.5m-16.5-9h13.5M9 7.5h6" /></svg>
+                <span>Bank Soal</span>
+            </a>
+            <a href="{{ route('admin.quiz.index') }}" 
+               class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.quiz.index') || Request::routeIs('admin.quiz.questions') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.174c-.053-.462.312-.85.778-.85h13.924c.466 0 .83.388.778.85a49.52 49.52 0 0 1-15.48 0ZM19.5 10.174v6.72a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 16.894v-6.72M12 2.25l8.625 4.5L12 11.25l-8.625-4.5L12 2.25Z" />
+                </svg>
+                <span>Kelola Kuis</span>
+            </a>
+            <a href="{{ route('admin.students.index') }}" 
+               class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.students.*') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.174c-.053-.462.312-.85.778-.85h13.924c.466 0 .83.388.778.85a49.52 49.52 0 0 1-15.48 0ZM19.5 10.174v6.72a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 16.894v-6.72M12 2.25l8.625 4.5L12 11.25l-8.625-4.5L12 2.25Z" />
+                </svg>
+                <span>Kelola Siswa</span>
+            </a>
+        @endif
     </div>
     
     <div class="p-4 border-t border-gray-100 text-center">
@@ -122,4 +178,4 @@
             }, 300);
         }
     }
-</script>   
+</script>

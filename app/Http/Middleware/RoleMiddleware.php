@@ -4,27 +4,27 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Auth;
 
 class RoleMiddleware
 {
-    public function handle(Request $request, Closure $next, string $role): Response
+    /**
+     * Handle an incoming request.
+     */
+    public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        // 1. Cek apakah user sudah login
-        if (!Auth::check()) {
-            return redirect('/login');
+        // Pastikan user sudah login dan role-nya ada di dalam daftar parameter $roles
+        if (Auth::check() && in_array(Auth::user()->role, $roles)) {
+            return $next($request);
         }
 
-        // 2. Cek apakah role user sesuai dengan yang diminta route
-        if (Auth::user()->role !== $role) {
-            // Jika peserta coba-coba masuk ke admin (atau sebaliknya), tendang ke dashboardnya masing-masing
-            if (Auth::user()->role === 'admin') {
-                return redirect('/admin/dashboard');
-            }
-            return redirect('/peserta/dashboard');
+        // Jika peserta mencoba masuk area admin, lempar ke dashboard peserta
+        if (Auth::check() && Auth::user()->role === 'peserta') {
+            return redirect('/peserta/dashboard')->with('error', 'Anda tidak memiliki hak akses ke halaman tersebut.');
         }
 
-        return $next($request);
+        // Default: tendang ke halaman login
+        return redirect('/login')->with('error', 'Akses ditolak.');
     }
 }

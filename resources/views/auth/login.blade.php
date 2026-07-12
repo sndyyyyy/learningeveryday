@@ -17,6 +17,13 @@
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
+<a href="{{ url('/') }}" class="absolute top-6 left-6 text-gray-500 hover:text-indigo-600 font-semibold text-xs flex items-center gap-1 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Kembali ke Beranda
+    </a>
+
     <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
         
         <div class="flex flex-col items-center mb-6">
@@ -38,8 +45,8 @@
         <form action="{{ url('/login') }}" method="POST" class="space-y-4">
             @csrf
             <div>
-                <label class="block text-gray-600 font-semibold text-xs mb-1">Email</label>
-                <input type="text" name="email" value="{{ old('email') }}" required placeholder="nama@email.com"
+                <label class="block text-gray-600 font-semibold text-xs mb-1">Username</label>
+                <input type="text" name="email" value="{{ old('email') }}" required placeholder="Username"
                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
             </div>
 
@@ -65,6 +72,13 @@
                 class="w-full bg-indigo-600 text-white font-bold py-2.5 rounded-xl hover:bg-indigo-700 transition duration-200 cursor-pointer shadow-sm text-sm">
                 Masuk
             </button>
+
+            <div class="text-center pt-4 border-t border-gray-100 mt-4">
+    <p class="text-xs text-gray-500">
+        Belum memiliki akun berlangganan? 
+        <a href="{{ url('/register') }}" class="text-indigo-600 font-bold hover:underline">Daftar / Sign Up</a>
+    </p>
+</div>
         </form>
     </div>
 
