@@ -11,59 +11,122 @@ use App\Models\Question;
 class PesertaController extends Controller
 {
     // 1. Dashboard Utama Peserta (Dibatasi maksimal 3 data kuis terbaru)
-public function index()
-{
-    $user = auth()->user();
-    
-    // Asumsi ID Super Admin Pusat adalah 1. Sesuaikan jika berbeda di DB.
-    $superAdminId = 1; 
+    public function index()
+    {
+        $user = auth()->user();
+        
+        // Asumsi ID Super Admin Pusat adalah 1. Sesuaikan jika berbeda di DB.
+        $superAdminId = 1; 
 
-    // 1. FILTER QUIS (Logika Tahap 6)
-    if ($user->instansi_id !== null) {
-        $quizzes = Quiz::where('created_by', $user->instansi_id)
-                       ->latest()
-                       ->get();
-    } elseif ($user->subscription === 'siswa_premium') {
-        $quizzes = Quiz::where('created_by', $superAdminId)
-                       ->latest()
-                       ->get();
-    } else {
-        $quizzes = Quiz::where('created_by', $superAdminId)
-                       ->whereIn('tier_access', ['basic', 'all'])
-                       ->latest()
-                       ->get();
+        // 1. FILTER QUIS (Logika Tahap 6 - Isolasi Baru)
+        if ($user->instansi_id !== null) {
+            // 🏫 SISWA INSTANSI
+            $quizzes = Quiz::where('created_by', $user->instansi_id)
+                           ->latest()
+                           ->get();
+        } elseif ($user->subscription === 'siswa_khusus') {
+            // ⚓ TES KHUSUS (Marlins): Terisolasi, hanya melihat kuis 'khusus'
+            $quizzes = Quiz::where('created_by', $superAdminId)
+                           ->where('tier_access', 'khusus')
+                           ->latest()
+                           ->get();
+        } elseif ($user->subscription === 'siswa_premium') {
+            // 👑 PREMIUM: Melihat Premium & Basic
+            $quizzes = Quiz::where('created_by', $superAdminId)
+                           ->whereIn('tier_access', ['premium', 'basic'])
+                           ->latest()
+                           ->get();
+        } else {
+            // 🟢 BASIC: Hanya melihat Basic
+            $quizzes = Quiz::where('created_by', $superAdminId)
+                           ->where('tier_access', 'basic')
+                           ->latest()
+                           ->get();
+        }
+
+        // 2. AMBIL DATA RIWAYAT (Untuk mengatasi Error Undefined Variable $history)
+        $history = \App\Models\QuizResult::where('user_id', $user->id)
+                                         ->with('quiz') // Eager load relasi kuisnya agar title kuis terbaca
+                                         ->latest()
+                                         ->get();
+
+        // Kirim kedua variabel ke view kuis
+        return view('peserta.dashboard', compact('quizzes', 'history'));
     }
 
-    // 2. AMBIL DATA RIWAYAT (Untuk mengatasi Error Undefined Variable $history)
-    // Asumsi kamu punya model QuizResult atau nama tabel sejenis untuk menyimpan hasil ujian.
-    // Silakan sesuaikan nama model di bawah ini dengan model riwayat kuis asli milikmu (misal: QuizResult atau History).
-    $history = \App\Models\QuizResult::where('user_id', $user->id)
-                                     ->with('quiz') // Eager load relasi kuisnya agar title kuis terbaca
-                                     ->latest()
-                                     ->get();
-
-    // Kirim kedua variabel ke view kuis
-    return view('peserta.dashboard', compact('quizzes', 'history'));
-}
-
-    // 2. Halaman Baru: Menampilkan SELURUH Kuis Tanpa Batasan (Poin 1)
+    // 2. Halaman Baru: Menampilkan SELURUH Kuis Sesuai Paket
     public function allQuizzes()
     {
-        // Ambil semua data kuis dari database tanpa batasan jumlah
-        $quizzes = Quiz::latest()->get();
+        $user = auth()->user();
+        
+        // Asumsi ID Super Admin Pusat adalah 1.
+        $superAdminId = 1; 
 
+        // Terapkan isolasi query yang sama persis seperti di dashboard utama
+        if ($user->instansi_id !== null) {
+            // 🏫 SISWA INSTANSI
+            $quizzes = Quiz::where('created_by', $user->instansi_id)
+                           ->latest()
+                           ->get();
+        } elseif ($user->subscription === 'siswa_khusus') {
+            // ⚓ TES KHUSUS
+            $quizzes = Quiz::where('created_by', $superAdminId)
+                           ->where('tier_access', 'khusus')
+                           ->latest()
+                           ->get();
+        } elseif ($user->subscription === 'siswa_premium') {
+            // 👑 PREMIUM
+            $quizzes = Quiz::where('created_by', $superAdminId)
+                           ->whereIn('tier_access', ['premium', 'basic'])
+                           ->latest()
+                           ->get();
+        } else {
+            // 🟢 BASIC
+            $quizzes = Quiz::where('created_by', $superAdminId)
+                           ->where('tier_access', 'basic')
+                           ->latest()
+                           ->get();
+        }
+        
         return view('peserta.quiz-all', compact('quizzes'));
     }
 
     public function showQuiz(Quiz $quiz)
     {
+        $user = auth()->user();
+        $superAdminId = 1;
+
+        // PROTEKSI SAAS: Cegah loncat URL
+        if ($user->instansi_id !== null) {
+            if ($quiz->created_by !== $user->instansi_id) {
+                abort(403, 'Anda tidak memiliki hak akses untuk mengerjakan kuis instansi lain.');
+            }
+        } else {
+            if ($quiz->created_by !== $superAdminId) {
+                abort(403, 'Siswa mandiri tidak dapat mengakses kuis milik instansi.');
+            }
+            
+            // Aturan Isolasi Tes Khusus (Marlins)
+            if ($user->subscription === 'siswa_khusus' && $quiz->tier_access !== 'khusus') {
+                abort(403, 'Akun Anda hanya diizinkan untuk mengakses Tes Khusus.');
+            }
+            if ($user->subscription !== 'siswa_khusus' && $quiz->tier_access === 'khusus') {
+                abort(403, 'Kuis ini khusus untuk pendaftar Tes Khusus.');
+            }
+            
+            // Aturan Hierarki Premium > Basic
+            if ($user->subscription === 'siswa_basic' && $quiz->tier_access === 'premium') {
+                abort(403, 'Konten ini hanya tersedia untuk paket Siswa Premium.');
+            }
+        }
+
         // Mengambil semua soal yang ada di kuis ini
-        $questions = Question::with('bankPart') // Tarik data nama part-nya sekalian
+        $questions = Question::with('bankPart')
             ->where('quiz_id', $quiz->id)
-            ->orderBy('bank_part_id', 'asc') // Kelompokkan soal berdasarkan part/section agar tidak tercampur
-            ->inRandomOrder() // Soal di dalam part yang sama tetap teracak urutannya bagi tiap peserta
+            ->orderBy('bank_part_id', 'asc') 
+            ->inRandomOrder() 
             ->get();
-        // Jika kuis belum ada soalnya, balikin ke dashboard dengan pesan peringatan
+
         if ($questions->isEmpty()) {
             return redirect()->back()->with('error', 'Kuis ini belum memiliki soal. Silakan pilih kuis lain.');
         }

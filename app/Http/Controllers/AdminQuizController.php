@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Storage;
 
 class AdminQuizController extends Controller
 {
-public function index()
+    public function index()
     {
         $user = auth()->user();
 
@@ -28,7 +28,7 @@ public function index()
         return view('admin.quiz.index', compact('quizzes'));
     }
 
-    // 2. Menyimpan Kuis Baru dengan Label Akses Tier
+    // Menyimpan Kuis Baru dengan Label Akses Tier
     public function storeQuiz(Request $request)
     {
         $user = auth()->user();
@@ -36,22 +36,49 @@ public function index()
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            // Validasi tier_access wajib diisi jika dia Super Admin
-            'tier_access' => 'required_if:auth_role,super_admin|in:basic,premium,all',
+            'tier_access' => 'required_if:auth_role,super_admin|in:basic,premium,khusus',
         ]);
 
-        // Tentukan tier access secara otomatis
-        // Jika Super Admin, ambil dari input form. Jika Admin Instansi, set default 'all' (atau otomatis 'instansi')
-        $tierAccess = ($user->role === 'super_admin') ? $request->tier_access : 'all';
+        $tierAccess = ($user->role === 'super_admin') ? $request->tier_access : 'basic';
 
         Quiz::create([
             'title' => $request->title,
             'description' => $request->description,
             'created_by' => $user->id, 
-            'tier_access' => $tierAccess, // 👈 Kolom baru database tersimpan disini
+            'tier_access' => $tierAccess, 
         ]);
 
         return redirect()->back()->with('success', 'Kuis baru berhasil dibuat!');
+    }
+
+    // =========================================================================
+    // FITUR BARU: MEMPROSES UPDATE DATA KUIS (SUPER ADMIN & ADMIN INSTANSI)
+    // =========================================================================
+    public function updateQuiz(Request $request, Quiz $quiz)
+    {
+        $user = auth()->user();
+
+        // Proteksi: Admin instansi dilarang mengedit kuis milik instansi lain
+        if ($user->role !== 'super_admin' && $quiz->created_by !== $user->id) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengubah kuis ini.');
+        }
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'tier_access' => 'required_if:auth_role,super_admin|in:basic,premium,khusus',
+        ]);
+
+        // Jika super admin, tier_access bisa diubah. Jika admin instansi, biarkan tetap data lama
+        $tierAccess = ($user->role === 'super_admin') ? $request->tier_access : $quiz->tier_access;
+
+        $quiz->update([
+            'title' => $request->title,
+            'description' => $request->description,
+            'tier_access' => $tierAccess,
+        ]);
+
+        return redirect()->back()->with('success', 'Data kuis berhasil diperbarui!');
     }
 
     public function showQuestions(Quiz $quiz)
@@ -90,8 +117,6 @@ public function index()
                     'audio' => $bq->audio,
                     'options' => $bq->options, 
                     'correct_answer' => $bq->correct_answer,
-                    
-                    // SALIN FITUR PEMBAHASAN JUGA
                     'explanation' => $bq->explanation,
                     'explanation_link' => $bq->explanation_link,
                     'is_show_explanation' => $bq->is_show_explanation ?? true
@@ -110,18 +135,14 @@ public function index()
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
-            
-            // VALIDASI BARU
             'explanation' => 'nullable|string',
             'explanation_link' => 'nullable|url',
             'is_show_explanation' => 'required|boolean',
-            
             'option_a' => 'required_if:type,multiple_choice',
             'option_b' => 'required_if:type,multiple_choice',
             'option_c' => 'required_if:type,multiple_choice',
             'option_d' => 'required_if:type,multiple_choice',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
-            
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
         ]);
 
@@ -149,8 +170,6 @@ public function index()
             'audio' => $audioPath,
             'options' => $options, 
             'correct_answer' => $correctAnswer,
-            
-            // SIMPAN DATA BARU
             'explanation' => $request->explanation,
             'explanation_link' => $request->explanation_link,
             'is_show_explanation' => $request->is_show_explanation,
@@ -166,18 +185,14 @@ public function index()
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
-            
-            // VALIDASI BARU
             'explanation' => 'nullable|string',
             'explanation_link' => 'nullable|url',
             'is_show_explanation' => 'required|boolean',
-            
             'option_a' => 'required_if:type,multiple_choice',
             'option_b' => 'required_if:type,multiple_choice',
             'option_c' => 'required_if:type,multiple_choice',
             'option_d' => 'required_if:type,multiple_choice',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
-            
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
         ]);
 
@@ -224,8 +239,6 @@ public function index()
         $question->question_text = $request->question_text;
         $question->options = $options;
         $question->correct_answer = $correctAnswer;
-        
-        // UPDATE DATA BARU
         $question->explanation = $request->explanation;
         $question->explanation_link = $request->explanation_link;
         $question->is_show_explanation = $request->is_show_explanation;

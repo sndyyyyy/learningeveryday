@@ -38,8 +38,12 @@
                  NAVBAR TOP DESKTOP: FILTER PERAN SECARA KETAT
                  =================================================== -->
             @if(auth()->user()->role === 'super_admin')
-                <a href="{{ route('admin.dashboard') }}" 
-                   class="{{ Request::routeIs('admin.dashboard') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+            <a href="{{ route('admin.dashboard.utama') }}" 
+   class="{{ Request::routeIs('admin.dashboard.utama') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+   Dashboard
+</a>
+                <a href="{{ route('admin.peserta.index') }}" 
+                   class="{{ Request::routeIs('admin.peserta.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
                    Kelola Peserta
                 </a>
                 <a href="{{ route('admin.bank.index') }}"
@@ -57,6 +61,10 @@
             @endif
 
             @if(auth()->user()->role === 'admin')
+                        <a href="{{ route('admin.dashboard.utama') }}" 
+   class="{{ Request::routeIs('admin.dashboard.utama') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+   Dashboard
+</a>
                 <a href="{{ route('admin.bank.index') }}"
                    class="{{ Request::routeIs('admin.bank.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
                    Bank Soal
@@ -103,8 +111,8 @@
              SIDEBAR MOBILE DRAWER: FILTER PERAN SECARA KETAT
              =================================================== -->
         @if(auth()->user()->role === 'super_admin')
-            <a href="{{ route('admin.dashboard') }}" 
-               class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.dashboard') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
+            <a href="{{ route('admin.dashboard.utama') }}" 
+               class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('admin.dashboard.utama') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-2.533-4.656 6.953 6.953 0 0 1-2.212-3.153 4.908 4.908 0 0 1-1.653-.739 4.125 4.125 0 0 0-1.828 3.307 10.56 10.56 0 0 1-1.258 5.485ZM3 19.128a9.38 9.38 0 0 1 2.625.372 9.337 9.337 0 0 1 4.121-.952 4.125 4.125 0 0 1-2.533-4.656 6.953 6.953 0 0 0-2.212-3.153 4.908 4.908 0 0 0-1.653-.739 4.125 4.125 0 0 1-1.828 3.307 10.56 10.56 0 0 0-1.258 5.485ZM12 11.25a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
                 </svg>

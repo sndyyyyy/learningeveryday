@@ -38,7 +38,9 @@ Route::get('/stream-audio', [AudioStreamController::class, 'stream'])->name('aud
 // =========================================================================
 Route::middleware(['auth', 'role:super_admin,admin'])->group(function () {
     // Halaman Manajemen Kuis Utama & Akses Bank Soal
+    Route::get('/admin/dashboard', [AdminPesertaController::class, 'dashboardUtama'])->name('admin.dashboard.utama');
     Route::get('/admin/quiz', [AdminQuizController::class, 'index'])->name('admin.quiz.index');
+    Route::put('/admin/quiz/{quiz}/update', [AdminQuizController::class, 'updateQuiz'])->name('admin.quiz.update');
     Route::post('/admin/quiz', [AdminQuizController::class, 'storeQuiz'])->name('admin.quiz.store');
     Route::get('/admin/quiz/{quiz}/questions', [AdminQuizController::class, 'showQuestions'])->name('admin.quiz.questions');
     Route::post('/admin/quiz/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])->name('admin.quiz.questions.store');
@@ -73,7 +75,7 @@ Route::middleware(['auth', 'role:super_admin'])->group(function () {
     Route::put('/admin/approval/{user}/reject', [SuperAdminController::class, 'reject'])->name('admin.approval.reject');
 
     // Menu Manajemen Peserta Mandiri (Bawaan Lama Pusat)
-    Route::get('/admin/dashboard', [AdminPesertaController::class, 'index'])->name('admin.dashboard');
+    Route::get('/admin/peserta', [AdminPesertaController::class, 'index'])->name('admin.peserta.index');
     Route::post('/admin/peserta', [AdminPesertaController::class, 'store'])->name('admin.peserta.store');
     Route::put('/admin/peserta/{user}', [AdminPesertaController::class, 'update'])->name('admin.peserta.update');
     Route::delete('/admin/peserta/{user}', [AdminPesertaController::class, 'destroy'])->name('admin.peserta.destroy');

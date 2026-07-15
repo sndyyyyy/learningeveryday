@@ -14,6 +14,12 @@
 
     @include('layouts.navbar')
 
+    <div class="bg-white border-t border-gray-100 py-3 px-4 md:px-8 flex items-center shadow-xs">
+        <a href="{{ route('admin.dashboard.utama') }}" class="text-xs md:text-sm text-gray-500 hover:text-indigo-600 font-semibold transition">
+            &larr; Kembali ke Beranda
+        </a>
+    </div>
+
     <div class="max-w-6xl mx-auto mt-8 px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
         
         <div class="md:col-span-1 flex flex-col space-y-6">

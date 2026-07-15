@@ -33,8 +33,20 @@
         </div>
 
         @if(session('success'))
-            <div class="bg-green-50 border border-green-200 text-green-600 p-4 rounded-xl mb-4 text-xs font-semibold leading-relaxed">
-                {{ session('success') }}
+            <div class="bg-green-50 border border-green-200 text-green-600 p-4 rounded-xl mb-5 text-xs font-semibold leading-relaxed flex flex-col gap-3">
+                <div>
+                    {{ session('success') }}
+                </div>
+                
+                <!-- Ganti nomor 628xxxxxxxxx di bawah ini dengan nomor WA Admin Pusat kamu -->
+                <a href="https://wa.me/6281286467225?text={{ session('wa_text') }}" 
+                   target="_blank" 
+                   class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-xl transition duration-200 shadow-xs self-start text-[11px] tracking-wide cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" h="14" fill="currentColor" class="w-4 h-4" viewBox="0 0 16 16">
+                        <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.925h.004c4.368 0 7.926-3.559 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.69-4.936c-.202-.102-1.202-.593-1.387-.66-.185-.066-.32-.1-.454.1-.134.2-.522.66-.64.798-.118.133-.236.15-.439.049-.202-.102-.855-.315-1.628-.888-.6-.535-1.004-1.199-1.122-1.402-.118-.202-.012-.311.089-.412.091-.09.202-.237.303-.354.101-.117.134-.199.202-.331.066-.132.033-.248-.017-.35-.05-.101-.454-1.093-.622-1.498-.164-.398-.333-.344-.454-.35-.116-.006-.25-.006-.383-.006-.133 0-.35.05-.534.25-.183.2-VERSION-.696.696-.696 1.487 0 1.548.57 2.286 1.13 2.844 1.56 1.218 2.384 2.18 3.55 2.66.277.114.53.188.729.251.289.09.552.077.76.046.232-.034.718-.294.819-.579.1-.285.1-.53.07-.579-.031-.049-.117-.08-.32-.18z"/>
+                    </svg>
+                    Konfirmasi Klik Di Sini via WA
+                </a>
             </div>
         @endif
 
@@ -98,6 +110,15 @@
                         </div>
                         <p class="text-[10px] text-gray-400 leading-normal">Kelola admin mandiri tanpa batasan kuis maupun siswa.</p>
                     </label>
+
+                    <label class="border-2 border-gray-200 rounded-xl p-3 flex flex-col justify-between cursor-pointer transition select-none hover:border-indigo-500 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50/30">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-gray-800">Siswa Khusus</span>
+                            <input type="radio" name="subscription" value="siswa_khusus" class="w-3.5 h-3.5 text-indigo-600">
+                        </div>
+                        <p class="text-[10px] text-gray-400 leading-normal">Buka seluruh bank soal premium tanpa batasan fitur.</p>
+                    </label>
+
                 </div>
             </div>
 

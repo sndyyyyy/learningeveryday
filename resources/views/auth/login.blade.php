@@ -45,8 +45,8 @@
         <form action="{{ url('/login') }}" method="POST" class="space-y-4">
             @csrf
             <div>
-                <label class="block text-gray-600 font-semibold text-xs mb-1">Username</label>
-                <input type="text" name="email" value="{{ old('email') }}" required placeholder="Username"
+                <label class="block text-gray-600 font-semibold text-xs mb-1">Email / Username</label>
+                <input type="text" name="email" value="{{ old('email') }}" required placeholder="Email / Username"
                     class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
             </div>
 

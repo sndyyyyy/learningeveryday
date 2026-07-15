@@ -14,37 +14,49 @@ class AuthController extends Controller
         return view('auth.login');
     }
 
-public function showRegister()
+    public function showRegister()
     {
         return view('auth.register');
     }
 
     // Memproses data inputan Sign Up pendaftar baru
+// Memproses data inputan Sign Up pendaftar baru
     public function register(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
-            'subscription' => 'required|in:siswa_basic,siswa_premium,instansi_basic,instansi_premium',
+            'subscription' => 'required|in:siswa_basic,siswa_premium,siswa_khusus,instansi_basic,instansi_premium',
         ]);
 
         // Atur Role dasar secara otomatis berdasarkan pilihan jenis paket langganan
-        // Paket instansi_xxx mendapat hak akses 'admin'
         $role = str_contains($request->subscription, 'instansi') ? 'admin' : 'peserta';
 
         User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'raw_password' => $request->password, // Disimpan mentah untuk mempermudah Super Admin cross-check saat approval
+            'raw_password' => $request->password,
             'role' => $role,
             'subscription' => $request->subscription,
-            'account_status' => 'pending', // Otomatis berstatus pending dan tidak bisa langsung login
+            'account_status' => 'pending',
             'instansi_id' => null
         ]);
 
-        return redirect()->back()->with('success', 'Pengajuan akun berhasil dikirim! Silakan hubungi Super Admin untuk proses aktivasi dan pemeriksaan berkas administrasi sebelum melakukan login.');
+        // Membuat format teks draf pesan WhatsApp agar rapi (menggunakan urlencode)
+        $namaPaket = str_replace('_', ' ', strtoupper($request->subscription));
+        $textMessage = "Halo Admin Pusat, saya ingin mengonfirmasi pengajuan registrasi akun di learningeveryday.\n\n"
+                     . "Nama / Instansi: " . $request->name . "\n"
+                     . "Email / Username: " . $request->email . "\n"
+                     . "Paket Langganan: " . $namaPaket . "\n\n"
+                     . "Mohon untuk segera diperiksa berkas administrasi dan diaktifkan. Terima kasih!";
+
+        // Kembalikan ke halaman sebelumnya dengan sukses teks pesan WA
+        return redirect()->back()->with([
+            'success' => 'Pengajuan akun berhasil dikirim! Silakan lakukan aktivasi dan pemeriksaan berkas administrasi sebelum melakukan login.',
+            'wa_text' => urlencode($textMessage)
+        ]);
     }
 
     // Penyesuaian Interseptor Login Eksisting
@@ -74,7 +86,7 @@ public function showRegister()
 
             // Pengalihan dashboard dinamis sesuai role
             if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'admin') {
-                return redirect()->intended('/admin/quiz'); // Atau rute dashboard admin-mu
+                return redirect()->route('admin.dashboard.utama'); // Atau rute dashboard admin-mu
             }
             return redirect()->intended('/peserta/dashboard');
         }

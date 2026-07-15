@@ -7,12 +7,41 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\QuizResult;
 use App\Models\Question;
+use App\Models\Quiz;
 
 
 
 class AdminPesertaController extends Controller
 {
     // Menampilkan daftar peserta
+
+public function dashboardUtama()
+{
+    $user = auth()->user();
+    $stats = [];
+
+    if ($user->role === 'super_admin') {
+        // 👑 STATISTIK PUSAT (SUPER ADMIN)
+        $stats['total_instansi'] = User::where('role', 'admin')->count();
+        $stats['total_peserta_mandiri'] = User::where('role', 'peserta')->whereNull('instansi_id')->count();
+        $stats['total_kuis_pusats'] = Quiz::where('created_by', $user->id)->count();
+        $stats['pending_approval'] = User::where('account_status', 'pending')->count();
+    } else {
+        // 🏫 STATISTIK INTERNAL SEKOLAH (ADMIN INSTANSI)
+        $stats['total_siswa'] = User::where('instansi_id', $user->id)->count();
+        $stats['total_kuis_mandiri'] = Quiz::where('created_by', $user->id)->count();
+        
+        // Hitung total ujian yang sudah disubmit oleh murid-muridnya
+        $studentIds = User::where('instansi_id', $user->id)->pluck('id');
+        $stats['total_ujian_diikuti'] = QuizResult::whereIn('user_id', $studentIds)->count();
+        
+        // Sisa kuota jika paket basic
+        $stats['sisa_kuota'] = $user->subscription === 'instansi_basic' ? (50 - $stats['total_siswa']) : 'Tanpa Batas';
+    }
+
+    return view('admin.dashboard-utama', compact('stats'));
+}
+
     public function index()
     {
         // Mengambil user yang role-nya 'peserta' saja

@@ -14,6 +14,12 @@
 
 @include('layouts.navbar')
 
+    <div class="bg-white border-t border-gray-100 py-3 px-4 md:px-8 flex items-center shadow-xs">
+        <a href="{{ route('admin.dashboard.utama') }}" class="text-xs md:text-sm text-gray-500 hover:text-indigo-600 font-semibold transition">
+            &larr; Kembali ke Beranda
+        </a>
+    </div>
+
     <div class="max-w-6xl mx-auto mt-8 px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
         
         <!-- SISI KIRI: PEMBUATAN KUIS -->
@@ -24,7 +30,6 @@
             @endif
             <form action="{{ route('admin.quiz.store') }}" method="POST" class="space-y-4">
                 @csrf
-                <!-- Input hidden pembantu untuk validasi required_if di controller -->
                 <input type="hidden" name="auth_role" value="{{ auth()->user()->role }}">
 
                 <div>
@@ -36,14 +41,13 @@
                     <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500"></textarea>
                 </div>
 
-                <!-- HANYA TAMPIL JIKA SUPER ADMIN: Dropdown Pilihan Paket Akses Kuis -->
                 @if(auth()->user()->role === 'super_admin')
                 <div>
                     <label class="block text-gray-600 text-xs font-semibold mb-1">Akses Paket Kuis (Tier)</label>
                     <select name="tier_access" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none bg-indigo-50 font-bold text-indigo-700">
-                        <option value="all">Bisa Diakses Semua (Basic & Premium)</option>
-                        <option value="basic">Khusus Paket Basic</option>
-                        <option value="premium">Khusus Paket Premium Only</option>
+                        <option value="basic">Kuis Basic (Diakses Basic & Premium)</option>
+                        <option value="premium">Khusus Premium Only</option>
+                        <option value="khusus">Tes Khusus (Marlins Test)</option>
                     </select>
                 </div>
                 @endif
@@ -64,38 +68,39 @@
                             <div class="flex items-center flex-wrap gap-2">
                                 <h3 class="font-bold text-gray-800 text-base md:text-lg leading-tight">{{ $quiz->title }}</h3>
                                 
-                                <!-- BADGE INDIKATOR HAK AKSES TIER (MULTI-TENANCY) -->
                                 @if($quiz->created_by !== 1 && $quiz->user?->role === 'admin') 
-                                    <!-- Angka 1 diasumsikan sebagai ID Super Admin utamamu -->
                                     <span class="bg-purple-50 text-purple-700 border border-purple-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">
                                         🏫 Instansi: {{ $quiz->user?->name ?? 'External' }}
                                     </span>
                                 @else
-                                    @if($quiz->tier_access === 'basic')
-                                        <span class="bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">🟢 Pusat: Basic</span>
-                                    @elseif($quiz->tier_access === 'premium')
-                                        <span class="bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">👑 Pusat: Premium</span>
+                                    @if($quiz->tier_access === 'premium')
+                                        <span class="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">👑 Premium</span>
+                                    @elseif($quiz->tier_access === 'khusus')
+                                        <span class="bg-sky-50 text-sky-700 border border-sky-200 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">⚓ Tes Khusus</span>
                                     @else
-                                        <span class="bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">🌍 Pusat: Semua</span>
+                                        <span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">🟢 Basic</span>
                                     @endif
                                 @endif
                             </div>
                             <p class="text-gray-500 text-xs md:text-sm leading-relaxed">{{ $quiz->description ?? 'Tidak ada deskripsi.' }}</p>
                         </div>
                         
-                        <!-- TOMBOL AKSI -->
                         <div class="shrink-0">
                             <div class="flex flex-wrap items-center justify-end sm:justify-start gap-2">
                                 <a href="{{ route('admin.quiz.questions', $quiz->id) }}" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-2.5 py-1.5 rounded-md text-xs font-bold transition cursor-pointer whitespace-nowrap inline-block">
                                     Kelola Soal &rarr;
                                 </a>
+
+                                <!-- FIX 1: Panggil fungsi openEditQuizModal dengan menyuntikkan data kuis asli secara lengkap -->
+                                <button onclick="openEditQuizModal('{{ $quiz->id }}', '{{ addslashes($quiz->title) }}', '{{ addslashes($quiz->description) }}', '{{ $quiz->tier_access }}')" class="text-amber-600 hover:text-amber-800 bg-amber-50 px-2.5 py-1.5 rounded-md text-xs font-bold transition cursor-pointer whitespace-nowrap inline-block">
+                                    Edit
+                                </button>
                                 
                                 <form id="form-delete-quiz-{{ $quiz->id }}" action="{{ route('admin.quiz.destroy', $quiz->id) }}" method="POST" class="inline-block">
                                     @csrf
                                     @method('DELETE')
-                                    <!-- FIX: Mengganti confirm bawaan ke modal custom global -->
                                     <button type="button" 
-                                            onclick="triggerCustomDeleteModal('form-delete-quiz-{{ $quiz->id }}', '{{ $quiz->title }}')"
+                                            onclick="triggerCustomDeleteModal('form-delete-quiz-{{ $quiz->id }}', '{{ addslashes($quiz->title) }}')"
                                             class="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 px-2.5 py-1.5 rounded-md transition cursor-pointer whitespace-nowrap">
                                         Hapus
                                     </button>
@@ -109,6 +114,59 @@
             </div>
         </div>
     </div>
+
+    <!-- ===================================================
+         MODAL POP-UP STYLISH: EDIT DATA KUIS (FIXED)
+         =================================================== -->
+    <div id="edit-quiz-modal" class="fixed top-0 left-0 w-full h-full bg-black/60 hidden justify-center items-center z-50 backdrop-blur-xs transition-all duration-300">
+        <div class="bg-white p-6 rounded-2xl max-w-sm w-[90%] shadow-2xl animate-fade-in flex flex-col">
+            <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
+                <h3 class="text-base font-bold text-gray-800 flex items-center gap-1">
+                    <span>✏️</span> Ubah Informasi Kuis
+                </h3>
+                <button onclick="closeEditQuizModal()" class="text-gray-400 hover:text-gray-600 font-bold cursor-pointer text-lg">&times;</button>
+            </div>
+            
+            <form id="edit-quiz-form" method="POST" class="space-y-4 text-left">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="auth_role" value="{{ auth()->user()->role }}">
+
+                <div>
+                    <label class="block text-gray-600 text-xs font-semibold mb-1">Judul Kuis Baru</label>
+                    <input type="text" id="edit-quiz-title" name="title" required
+                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-medium text-gray-800">
+                </div>
+
+                <div>
+                    <label class="block text-gray-600 text-xs font-semibold mb-1">Deskripsi Baru</label>
+                    <textarea id="edit-quiz-description" name="description" rows="2"
+                              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-medium text-gray-800"></textarea>
+                </div>
+
+                @if(auth()->user()->role === 'super_admin')
+                <div>
+                    <label class="block text-gray-600 text-xs font-semibold mb-1">Ubah Hak Akses Paket (Tier)</label>
+                    <select id="edit-quiz-tier" name="tier_access" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none bg-indigo-50 font-bold text-indigo-700">
+                        <option value="basic">Kuis Basic (Diakses Basic & Premium)</option>
+                        <option value="premium">Khusus Premium Only</option>
+                        <option value="khusus">Tes Khusus (Marlins Test)</option>
+                    </select>
+                </div>
+                @endif
+                
+                <div class="flex flex-row gap-2 w-full pt-1">
+                    <button type="button" class="w-1/2 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 rounded-xl text-xs cursor-pointer transition" onclick="closeEditQuizModal()">
+                        Batal
+                    </button>
+                    <button type="submit" class="w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-xl text-xs cursor-pointer transition">
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 
     <!-- ===================================================
          MODAL POP-UP STYLISH: GLOBAL KONFIRMASI HAPUS KUIS
@@ -162,6 +220,33 @@
             if (activeDeleteFormId) {
                 document.getElementById(activeDeleteFormId).submit();
             }
+        }
+
+        // FIX 2: Perbarui fungsi penanganan buka modal edit kuis secara menyeluruh
+        function openEditQuizModal(id, title, description, tier) {
+            const modal = document.getElementById('edit-quiz-modal');
+            
+            // Pasang endpoint aksi form update kuis dengan ID yang sesuai
+            document.getElementById('edit-quiz-form').action = "/admin/quiz/" + id + "/update";
+            
+            // Masukkan data lama ke komponen input field modal
+            document.getElementById('edit-quiz-title').value = title;
+            document.getElementById('edit-quiz-description').value = description;
+            
+            const tierSelect = document.getElementById('edit-quiz-tier');
+            if(tierSelect) {
+                tierSelect.value = tier;
+            }
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => { document.getElementById('edit-quiz-title').focus(); }, 50);
+        }
+
+        function closeEditQuizModal() {
+            const modal = document.getElementById('edit-quiz-modal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
         }
     </script>
 </body>
