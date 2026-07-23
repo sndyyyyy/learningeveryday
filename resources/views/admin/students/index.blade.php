@@ -35,7 +35,6 @@
                         {{ $currentStudentCount }} / {{ $instansi->subscription === 'instansi_basic' ? '50' : '∞' }} Siswa
                     </span>
                 </div>
-                <!-- Progress Bar Kuota -->
                 @if($instansi->subscription === 'instansi_basic')
                 <div class="w-full h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
                     <div class="h-full bg-indigo-600 transition-all" style="width: {{ ($currentStudentCount / 50) * 100 }}%"></div>
@@ -69,6 +68,12 @@
                         <input type="email" name="email" required placeholder="siswa@sekolah.com" 
                                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
                     </div>
+                    <!-- INPUT FIELD BARU: KELAS SISWA -->
+                    <div>
+                        <label class="block text-gray-600 text-xs font-semibold mb-1">Kelas Binaan</label>
+                        <input type="text" name="class_group" placeholder="Contoh: X-IPA-1, XII-IPS-3" 
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-bold text-indigo-600 placeholder-gray-300">
+                    </div>
                     <div>
                         <label class="block text-gray-600 text-xs font-semibold mb-1">Password Awal</label>
                         <input type="text" name="password" required placeholder="Minimal 6 Karakter" 
@@ -91,6 +96,7 @@
                         <tr class="border-b border-gray-200 text-gray-400 text-xs uppercase bg-gray-50">
                             <th class="py-3 pl-3 w-12">No</th>
                             <th class="py-3 px-3">Nama Siswa</th>
+                            <th class="py-3 px-3">Kelas</th> <!-- 👈 KOLOM BARU -->
                             <th class="py-3 px-3">Email / Username</th>
                             <th class="py-3 px-3">Password Mentah</th>
                             <th class="py-3 px-3 text-center">Aksi</th>
@@ -101,6 +107,12 @@
                             <tr class="hover:bg-gray-50/70 transition">
                                 <td class="py-3.5 pl-3 font-medium">{{ $index + 1 }}</td>
                                 <td class="py-3.5 px-3 font-semibold text-gray-800">{{ $student->name }}</td>
+                                <!-- PRINT DATA KELAS BARU -->
+                                <td class="py-3.5 px-3">
+                                    <span class="bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded text-[10px]">
+                                        {{ $student->class_group ?? 'Umum' }}
+                                    </span>
+                                </td>
                                 <td class="py-3.5 px-3 text-gray-500">{{ $student->email }}</td>
                                 <td class="py-3.5 px-3 font-mono text-gray-400">{{ $student->raw_password }}</td>
                                 <td class="py-3.5 px-3">
@@ -108,7 +120,7 @@
                                         <form id="form-delete-student-{{ $student->id }}" action="{{ route('admin.students.destroy', $student->id) }}" method="POST" class="inline-block">
                                             @csrf @method('DELETE')
                                             <button type="button" 
-                                                    onclick="triggerCustomDeleteModal('form-delete-student-{{ $student->id }}', '{{ $student->name }}')" 
+                                                    onclick="triggerCustomDeleteModal('form-delete-student-{{ $student->id }}', '{{ addslashes($student->name) }}')" 
                                                     class="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 px-2.5 py-1.5 rounded-md transition cursor-pointer whitespace-nowrap">
                                                 Hapus Akses
                                             </button>
@@ -118,7 +130,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="py-8 text-center text-gray-400">Belum ada akun siswa yang didaftarkan oleh instansi Anda.</td>
+                                <td colspan="6" class="py-8 text-center text-gray-400">Belum ada akun siswa yang didaftarkan oleh instansi Anda.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -126,6 +138,7 @@
             </div>
         </div>
 
+        <!-- HISTORI UJIAN -->
         <div class="col-span-1 md:col-span-3 bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 mt-6">
             <h2 class="text-base md:text-lg font-bold text-gray-800 mb-1">Histori Ujian Siswa</h2>
             <p class="text-xs text-gray-400 mb-4">Rekam jejak skor dan nilai kuis yang dikerjakan oleh murid instansi Anda.</p>

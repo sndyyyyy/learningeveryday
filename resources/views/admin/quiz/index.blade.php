@@ -41,6 +41,7 @@
                     <textarea name="description" rows="2" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500"></textarea>
                 </div>
 
+
                 @if(auth()->user()->role === 'super_admin')
                 <div>
                     <label class="block text-gray-600 text-xs font-semibold mb-1">Akses Paket Kuis (Tier)</label>
@@ -51,6 +52,11 @@
                     </select>
                 </div>
                 @endif
+
+                  <div>
+                    <label class="block text-gray-600 text-xs font-semibold mb-1">Target Kelas Kuis (Khusus Instansi)</label>
+                    <input type="text" name="class_group" placeholder="Kosongkan jika untuk semua kelas" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-bold text-purple-600 placeholder-gray-300">
+                </div>
 
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition cursor-pointer">
                     Simpan Kuis Baru
@@ -80,7 +86,12 @@
                                     @else
                                         <span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider">🟢 Basic</span>
                                     @endif
+
+                                    
                                 @endif
+                                
+
+
                             </div>
                             <p class="text-gray-500 text-xs md:text-sm leading-relaxed">{{ $quiz->description ?? 'Tidak ada deskripsi.' }}</p>
                         </div>
@@ -142,6 +153,12 @@
                     <label class="block text-gray-600 text-xs font-semibold mb-1">Deskripsi Baru</label>
                     <textarea id="edit-quiz-description" name="description" rows="2"
                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-medium text-gray-800"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-gray-600 text-xs font-semibold mb-1">Ubah Target Kelas</label>
+                    <input type="text" id="edit-quiz-class" name="class_group" placeholder="Kosongkan jika untuk semua kelas"
+                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-bold text-purple-600">
                 </div>
 
                 @if(auth()->user()->role === 'super_admin')
@@ -223,20 +240,15 @@
         }
 
         // FIX 2: Perbarui fungsi penanganan buka modal edit kuis secara menyeluruh
-        function openEditQuizModal(id, title, description, tier) {
+        function openEditQuizModal(id, title, description, tier, classGroup) {
             const modal = document.getElementById('edit-quiz-modal');
-            
-            // Pasang endpoint aksi form update kuis dengan ID yang sesuai
             document.getElementById('edit-quiz-form').action = "/admin/quiz/" + id + "/update";
-            
-            // Masukkan data lama ke komponen input field modal
             document.getElementById('edit-quiz-title').value = title;
             document.getElementById('edit-quiz-description').value = description;
+            document.getElementById('edit-quiz-class').value = classGroup; // 👈 SUNTIK DATA KELAS LAMA KUIS
             
             const tierSelect = document.getElementById('edit-quiz-tier');
-            if(tierSelect) {
-                tierSelect.value = tier;
-            }
+            if(tierSelect) { tierSelect.value = tier; }
 
             modal.classList.remove('hidden');
             modal.classList.add('flex');

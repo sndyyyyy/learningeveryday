@@ -29,6 +29,7 @@ class AdminQuizController extends Controller
     }
 
     // Menyimpan Kuis Baru dengan Label Akses Tier
+// Update di Fungsi storeQuiz
     public function storeQuiz(Request $request)
     {
         $user = auth()->user();
@@ -37,6 +38,7 @@ class AdminQuizController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'tier_access' => 'required_if:auth_role,super_admin|in:basic,premium,khusus',
+            'class_group' => 'nullable|string|max:50', // 👈 VALIDASI BARU KELAS KUIS
         ]);
 
         $tierAccess = ($user->role === 'super_admin') ? $request->tier_access : 'basic';
@@ -46,19 +48,17 @@ class AdminQuizController extends Controller
             'description' => $request->description,
             'created_by' => $user->id, 
             'tier_access' => $tierAccess, 
+            'class_group' => $request->class_group, // 👈 SIMPAN ATRIBUT KELAS KUIS
         ]);
 
         return redirect()->back()->with('success', 'Kuis baru berhasil dibuat!');
     }
 
-    // =========================================================================
-    // FITUR BARU: MEMPROSES UPDATE DATA KUIS (SUPER ADMIN & ADMIN INSTANSI)
-    // =========================================================================
+    // Update di Fungsi updateQuiz
     public function updateQuiz(Request $request, Quiz $quiz)
     {
         $user = auth()->user();
 
-        // Proteksi: Admin instansi dilarang mengedit kuis milik instansi lain
         if ($user->role !== 'super_admin' && $quiz->created_by !== $user->id) {
             abort(403, 'Anda tidak memiliki hak akses untuk mengubah kuis ini.');
         }
@@ -67,15 +67,16 @@ class AdminQuizController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'tier_access' => 'required_if:auth_role,super_admin|in:basic,premium,khusus',
+            'class_group' => 'nullable|string|max:50', // 👈 VALIDASI BARU KELAS KUIS
         ]);
 
-        // Jika super admin, tier_access bisa diubah. Jika admin instansi, biarkan tetap data lama
         $tierAccess = ($user->role === 'super_admin') ? $request->tier_access : $quiz->tier_access;
 
         $quiz->update([
             'title' => $request->title,
             'description' => $request->description,
             'tier_access' => $tierAccess,
+            'class_group' => $request->class_group, // 👈 UPDATE ATRIBUT KELAS KUIS
         ]);
 
         return redirect()->back()->with('success', 'Data kuis berhasil diperbarui!');
