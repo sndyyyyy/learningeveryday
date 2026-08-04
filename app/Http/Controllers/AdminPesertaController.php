@@ -9,122 +9,126 @@ use App\Models\QuizResult;
 use App\Models\Question;
 use App\Models\Quiz;
 
-
-
 class AdminPesertaController extends Controller
 {
-    // Menampilkan daftar peserta
+    public function dashboardUtama()
+    {
+        $user = auth()->user();
+        $stats = [];
 
-public function dashboardUtama()
-{
-    $user = auth()->user();
-    $stats = [];
+        if ($user->role === 'super_admin') {
+            $stats['total_instansi'] = User::where('role', 'admin')->count();
+            $stats['total_peserta_mandiri'] = User::where('role', 'peserta')->whereNull('instansi_id')->count();
+            $stats['total_kuis_pusats'] = Quiz::where('created_by', $user->id)->count();
+            $stats['pending_approval'] = User::where('account_status', 'pending')->count();
+        } else {
+            $stats['total_siswa'] = User::where('instansi_id', $user->id)->count();
+            $stats['total_kuis_mandiri'] = Quiz::where('created_by', $user->id)->count();
+            
+            $studentIds = User::where('instansi_id', $user->id)->pluck('id');
+            $stats['total_ujian_diikuti'] = QuizResult::whereIn('user_id', $studentIds)->count();
+            
+            $stats['sisa_kuota'] = $user->subscription === 'instansi_basic' ? (50 - $stats['total_siswa']) : 'Tanpa Batas';
+        }
 
-    if ($user->role === 'super_admin') {
-        // 👑 STATISTIK PUSAT (SUPER ADMIN)
-        $stats['total_instansi'] = User::where('role', 'admin')->count();
-        $stats['total_peserta_mandiri'] = User::where('role', 'peserta')->whereNull('instansi_id')->count();
-        $stats['total_kuis_pusats'] = Quiz::where('created_by', $user->id)->count();
-        $stats['pending_approval'] = User::where('account_status', 'pending')->count();
-    } else {
-        // 🏫 STATISTIK INTERNAL SEKOLAH (ADMIN INSTANSI)
-        $stats['total_siswa'] = User::where('instansi_id', $user->id)->count();
-        $stats['total_kuis_mandiri'] = Quiz::where('created_by', $user->id)->count();
-        
-        // Hitung total ujian yang sudah disubmit oleh murid-muridnya
-        $studentIds = User::where('instansi_id', $user->id)->pluck('id');
-        $stats['total_ujian_diikuti'] = QuizResult::whereIn('user_id', $studentIds)->count();
-        
-        // Sisa kuota jika paket basic
-        $stats['sisa_kuota'] = $user->subscription === 'instansi_basic' ? (50 - $stats['total_siswa']) : 'Tanpa Batas';
+        return view('admin.dashboard-utama', compact('stats'));
     }
-
-    return view('admin.dashboard-utama', compact('stats'));
-}
 
     public function index()
     {
-        // Mengambil user yang role-nya 'peserta' saja
-        $peserta = User::where('role', 'peserta')->latest()->get();
-$allResults = QuizResult::with(['quiz', 'user'])->latest()->get();
+        // 1. Peserta Mandiri (Yang dibuat oleh Super Admin / mendaftar mandiri)
+        $pesertaMandiri = User::where('role', 'peserta')
+                              ->whereNull('instansi_id')
+                              ->latest()
+                              ->get();
 
-    return view('admin.peserta.index', compact('peserta', 'allResults'));    }
+        // 2. Daftar Instansi beserta relasi siswa binaannya
+        $instansiList = User::where('role', 'admin')
+                            ->with(['students' => function($q) {
+                                $q->latest();
+                            }])
+                            ->latest()
+                            ->get();
 
-    // Menyimpan data peserta baru ke database
+        $allResults = QuizResult::with(['quiz', 'user'])->latest()->get();
+
+        return view('admin.peserta.index', compact('pesertaMandiri', 'instansiList', 'allResults'));
+    }
+
+    // Store Peserta Mandiri Baru
     public function store(Request $request)
     {
-        // Validasi input dari form
+        // Validasi bebas username (tanpa wajib @)
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|max:255|unique:users',
+            'email' => 'required|string|max:255|unique:users,email',
             'password' => 'required|string|min:6',
         ]);
 
-        // Create user baru dengan role otomatis 'peserta'
         User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'raw_password' => $request->password,
             'role' => 'peserta',
+            'account_status' => 'approved',
+            'instansi_id' => null, // Mandiri / Pusat
         ]);
 
-        return redirect()->back()->with('success', 'Akun peserta berhasil dibuat!');
+        return redirect()->back()->with('success', 'Akun peserta pusat berhasil dibuat!');
     }
 
-public function resetPassword($id)
-{
-    $peserta = User::findOrFail($id);
-    
-    $defaultPassword = 'password123'; // Kamu bisa ganti sesuai kemauan klien (misal: 12345678)
-    
-    $peserta->update([
-        'password' => Hash::make($defaultPassword),
-        'raw_password' => $defaultPassword
-    ]);
+    public function resetPassword($id)
+    {
+        $peserta = User::findOrFail($id);
+        $defaultPassword = 'password123';
+        
+        $peserta->update([
+            'password' => Hash::make($defaultPassword),
+            'raw_password' => $defaultPassword
+        ]);
 
-    return back()->with('success', "Password peserta {$peserta->name} berhasil direset menjadi: {$defaultPassword}");
-}
-
-    // Mengubah data peserta
-public function update(Request $request, User $user)
-{
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|string|max:255|unique:users,email,' . $user->id,
-    ]);
-
-    $user->update([
-        'name' => $request->name,
-        'email' => $request->email,
-    ]);
-
-    // Jika admin juga menginput password baru
-    if ($request->filled('password')) {
-        $request->validate(['password' => 'string|min:6']);
-        $user->update(['password' => decrypt($request->password)]); // atau Hash::make
+        return back()->with('success', "Password peserta {$peserta->name} berhasil direset menjadi: {$defaultPassword}");
     }
 
-    return redirect()->back()->with('success', 'Data peserta berhasil diperbarui!');
-}
+    public function update(Request $request, User $user)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|max:255|unique:users,email,' . $user->id,
+        ]);
 
-// Menghapus peserta
-public function destroy(User $user)
-{
-    $user->delete();
-    return redirect()->back()->with('success', 'Akun peserta berhasil dihapus!');
-}
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+        ]);
 
-public function showResultDetail(QuizResult $result)
-{
-    // Mengambil data kuis dan pertanyaan terkait
-    $quiz = $result->quiz;
-    $questions = Question::where('quiz_id', $quiz->id)->get();
+        if ($request->filled('password')) {
+            $request->validate(['password' => 'string|min:6']);
+            $user->update([
+                'password' => Hash::make($request->password),
+                'raw_password' => $request->password
+            ]);
+        }
 
-    return view('admin.peserta.rekap-detail', compact('result', 'quiz', 'questions'));
-}
+        return redirect()->back()->with('success', 'Data peserta berhasil diperbarui!');
+    }
 
-public function importPeserta(Request $request)
+    public function destroy(User $user)
+    {
+        $user->delete();
+        return redirect()->back()->with('success', 'Akun peserta berhasil dihapus!');
+    }
+
+    public function showResultDetail(QuizResult $result)
+    {
+        $quiz = $result->quiz;
+        $questions = Question::where('quiz_id', $quiz->id)->get();
+
+        return view('admin.peserta.rekap-detail', compact('result', 'quiz', 'questions'));
+    }
+
+    public function importPeserta(Request $request)
     {
         $request->validate([
             'excel_file' => 'required|file|mimes:csv,txt|max:2048'
@@ -134,21 +138,18 @@ public function importPeserta(Request $request)
         $path = $file->getRealPath();
 
         if (($handle = fopen($path, "r")) !== FALSE) {
-            // Lewati baris pertama (Header: Nama, Email, Password)
             fgetcsv($handle, 1000, ",");
 
             $importedCount = 0;
             $skippedCount = 0;
 
             while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                // Pastikan ada 3 kolom terisi
                 if (count($data) >= 3) {
                     $name = trim($data[0]);
-                    $email = trim($data[1]); // Bisa diisi Username / Email
+                    $email = trim($data[1]);
                     $password = trim($data[2]);
 
                     if (!empty($name) && !empty($email) && !empty($password)) {
-                        // Cek apakah email/username sudah pernah ada di database
                         $exists = User::where('email', $email)->exists();
                         
                         if (!$exists) {
@@ -158,24 +159,49 @@ public function importPeserta(Request $request)
                                 'password' => Hash::make($password),
                                 'raw_password' => $password,
                                 'role' => 'peserta',
+                                'account_status' => 'approved',
+                                'instansi_id' => null,
                             ]);
                             $importedCount++;
                         } else {
-                            $skippedCount++; // Lewati jika duplikat
+                            $skippedCount++;
                         }
                     }
                 }
             }
             fclose($handle);
             
-            $msg = "Berhasil mengimpor {$importedCount} akun peserta baru!";
+            $msg = "Berhasil mengimpor {$importedCount} akun peserta pusat baru!";
             if ($skippedCount > 0) {
-                $msg .= " ({$skippedCount} akun dilewati karena email/username sudah terdaftar).";
+                $msg .= " ({$skippedCount} akun dilewati karena username/email sudah terdaftar).";
             }
 
             return redirect()->back()->with('success', $msg);
         }
 
         return redirect()->back()->with('error', 'Gagal membaca file CSV.');
+    }
+
+    public function updateInstansiProfile(Request $request)
+    {
+        $user = auth()->user();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'school_logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        $data = ['name' => $request->name];
+
+        if ($request->hasFile('school_logo')) {
+            if ($user->school_logo) {
+                \Storage::disk('public')->delete($user->school_logo);
+            }
+            $data['school_logo'] = $request->file('school_logo')->store('instansi/logos', 'public');
+        }
+
+        $user->update($data);
+
+        return redirect()->back()->with('success', 'Profil dan Logo Sekolah berhasil diperbarui!');
     }
 }

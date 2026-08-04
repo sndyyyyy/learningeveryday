@@ -53,9 +53,15 @@
                 </div>
                 @endif
 
-                  <div>
+<!-- DUA-DUANYA (FORM BUAT & MODAL EDIT) DIGANTI MENJADI DROPDOWN KELAS DARI MASTER DATA -->
+                <div>
                     <label class="block text-gray-600 text-xs font-semibold mb-1">Target Kelas Kuis (Khusus Instansi)</label>
-                    <input type="text" name="class_group" placeholder="Kosongkan jika untuk semua kelas" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-bold text-purple-600 placeholder-gray-300">
+                    <select name="class_group" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-bold text-purple-700 bg-purple-50/30">
+                        <option value="">-- Semua Kelas (Umum) --</option>
+                        @foreach($classGroups as $cg)
+                            <option value="{{ $cg->name }}">{{ $cg->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-lg text-xs transition cursor-pointer">
@@ -155,10 +161,15 @@
                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-medium text-gray-800"></textarea>
                 </div>
 
+<!-- DUA-DUANYA (FORM BUAT & MODAL EDIT) DIGANTI MENJADI DROPDOWN KELAS DARI MASTER DATA -->
                 <div>
-                    <label class="block text-gray-600 text-xs font-semibold mb-1">Ubah Target Kelas</label>
-                    <input type="text" id="edit-quiz-class" name="class_group" placeholder="Kosongkan jika untuk semua kelas"
-                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-bold text-purple-600">
+                    <label class="block text-gray-600 text-xs font-semibold mb-1">Target Kelas Kuis (Khusus Instansi)</label>
+                    <select name="class_group" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-bold text-purple-700 bg-purple-50/30">
+                        <option value="">-- Semua Kelas (Umum) --</option>
+                        @foreach($classGroups as $cg)
+                            <option value="{{ $cg->name }}">{{ $cg->name }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
                 @if(auth()->user()->role === 'super_admin')

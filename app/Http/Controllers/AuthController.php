@@ -19,18 +19,16 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-    // Memproses data inputan Sign Up pendaftar baru
-// Memproses data inputan Sign Up pendaftar baru
     public function register(Request $request)
     {
+        // USERNAME/EMAIL BISA SENSITIF & TANPA FORMAT @ WAKTU REGISTRASI
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|max:255|unique:users,email',
             'password' => 'required|string|min:6',
             'subscription' => 'required|in:siswa_basic,siswa_premium,siswa_khusus,instansi_basic,instansi_premium',
         ]);
 
-        // Atur Role dasar secara otomatis berdasarkan pilihan jenis paket langganan
         $role = str_contains($request->subscription, 'instansi') ? 'admin' : 'peserta';
 
         User::create([
@@ -44,7 +42,6 @@ class AuthController extends Controller
             'instansi_id' => null
         ]);
 
-        // Membuat format teks draf pesan WhatsApp agar rapi (menggunakan urlencode)
         $namaPaket = str_replace('_', ' ', strtoupper($request->subscription));
         $textMessage = "Halo Admin Pusat, saya ingin mengonfirmasi pengajuan registrasi akun di learningeveryday.\n\n"
                      . "Nama / Instansi: " . $request->name . "\n"
@@ -52,26 +49,24 @@ class AuthController extends Controller
                      . "Paket Langganan: " . $namaPaket . "\n\n"
                      . "Mohon untuk segera diperiksa berkas administrasi dan diaktifkan. Terima kasih!";
 
-        // Kembalikan ke halaman sebelumnya dengan sukses teks pesan WA
         return redirect()->back()->with([
             'success' => 'Pengajuan akun berhasil dikirim! Silakan lakukan aktivasi dan pemeriksaan berkas administrasi sebelum melakukan login.',
             'wa_text' => urlencode($textMessage)
         ]);
     }
 
-    // Penyesuaian Interseptor Login Eksisting
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
+        // DUKUNG LOGIN DENGAN USERNAME TANPA @ (SENSITIF HURUFU BESAR/KECIL)
+        $request->validate([
+            'email' => 'required|string',
             'password' => 'required',
         ]);
 
-        // Cari tahu apakah user terdaftar
+        // Cek pencocokan username/email secara persis
         $user = User::where('email', $request->email)->first();
 
         if ($user) {
-            // CEGAT JIKA AKUN MASIH PENDING ATAU REJECTED
             if ($user->account_status === 'pending') {
                 return redirect()->back()->withInput()->withErrors(['email' => 'Akun Anda belum aktif. Mohon tunggu proses verifikasi/approval dari Super Admin.']);
             }
@@ -80,18 +75,17 @@ class AuthController extends Controller
             }
         }
 
-        // Jalankan alur login bawaan seperti biasa jika status 'approved'
-        if (Auth::attempt($credentials)) {
+        // Gunakan kredensial pencocokan email/username
+        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             $request->session()->regenerate();
 
-            // Pengalihan dashboard dinamis sesuai role
             if (Auth::user()->role === 'super_admin' || Auth::user()->role === 'admin') {
-                return redirect()->route('admin.dashboard.utama'); // Atau rute dashboard admin-mu
+                return redirect()->route('admin.dashboard.utama');
             }
             return redirect()->intended('/peserta/dashboard');
         }
 
-        return redirect()->back()->withInput()->withErrors(['email' => 'Kombinasi email dan password tidak cocok.']);
+        return redirect()->back()->withInput()->withErrors(['email' => 'Kombinasi Username/Email dan password tidak cocok.']);
     }
 
     public function logout(Request $request)

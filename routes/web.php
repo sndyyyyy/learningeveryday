@@ -10,6 +10,7 @@ use App\Http\Controllers\AudioStreamController;
 use App\Http\Controllers\QuestionBankController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SubUserController;
+use App\Http\Controllers\ClassGroupController;
 
 
 // Route::get('/', function () {
@@ -92,6 +93,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/students', [SubUserController::class, 'index'])->name('admin.students.index');
     Route::post('/admin/students', [SubUserController::class, 'store'])->name('admin.students.store');
     Route::delete('/admin/students/{student}', [SubUserController::class, 'destroy'])->name('admin.students.destroy');
+    Route::post('/admin/profile/update', [SubUserController::class, 'updateProfile'])->name('admin.profile.update');
+Route::post('/admin/classes/store', [ClassGroupController::class, 'store'])->name('admin.classes.store');
+    Route::delete('/admin/classes/{classGroup}', [ClassGroupController::class, 'destroy'])->name('admin.classes.destroy');
 });
 // Kelompok Route Khusus Peserta (Harus login & role-nya peserta)
 // Kelompok Route Khusus Peserta (Harus login & role-nya peserta)

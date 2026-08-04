@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Quiz extends Model
 {
-    protected $fillable = ['title', 'description', 'created_by', 'tier_access'];
+    protected $fillable = ['title', 'description', 'created_by', 'tier_access', 'class_group'];
 
     // Relasi ke Question (1 Quiz punya banyak Question)
     public function questions()

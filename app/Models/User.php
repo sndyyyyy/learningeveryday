@@ -10,8 +10,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -40,7 +38,12 @@ class User extends Authenticatable
         'subscription',    
         'account_status',  
         'instansi_id',     
+        'class_group',
+        'school_logo',
     ];
-
+    public function students()
+    {
+        return $this->hasMany(User::class, 'instansi_id');
+    }
     
 }

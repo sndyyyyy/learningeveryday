@@ -18,13 +18,15 @@ class SubUserController extends Controller
         $students = User::where('instansi_id', $instansi->id)->latest()->get();
         $currentStudentCount = $students->count();
 
+        $classGroups = \App\Models\ClassGroup::where('instansi_id', $instansi->id)->oldest('name')->get();
+
         $studentIds = $students->pluck('id');
         $histories = \App\Models\QuizResult::whereIn('user_id', $studentIds)
                                           ->with(['user', 'quiz']) 
                                           ->latest()
                                           ->get();
 
-        return view('admin.students.index', compact('students', 'currentStudentCount', 'instansi', 'histories'));
+        return view('admin.students.index', compact('students', 'currentStudentCount', 'instansi', 'histories', 'classGroups'));
     }
 
     public function store(Request $request)
@@ -38,11 +40,12 @@ class SubUserController extends Controller
             }
         }
 
+        // BISA USERNAME TANPA @ (Hanya validasi unique string)
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'required|string|max:255|unique:users,email',
             'password' => 'required|string|min:6',
-            'class_group' => 'nullable|string|max:50', // 👈 VALIDASI BARU
+            'class_group' => 'nullable|string|max:50',
         ]);
 
         User::create([
@@ -54,7 +57,7 @@ class SubUserController extends Controller
             'subscription' => null, 
             'account_status' => 'approved', 
             'instansi_id' => $instansi->id, 
-            'class_group' => $request->class_group, // 👈 SIMPAN DATA KELAS SISWA
+            'class_group' => $request->class_group,
         ]);
 
         return redirect()->back()->with('success', 'Akun siswa berhasil didaftarkan dan siap digunakan!');
@@ -68,5 +71,30 @@ class SubUserController extends Controller
 
         $student->delete();
         return redirect()->back()->with('success', 'Akun siswa berhasil dihapus.');
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = auth()->user();
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'school_logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ]);
+
+        $data = [
+            'name' => $request->name,
+        ];
+
+        if ($request->hasFile('school_logo')) {
+            if ($user->school_logo) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->school_logo);
+            }
+            $data['school_logo'] = $request->file('school_logo')->store('instansi/logos', 'public');
+        }
+
+        $user->update($data);
+
+        return redirect()->back()->with('success', 'Profil dan Logo Instansi berhasil diperbarui!');
     }
 }

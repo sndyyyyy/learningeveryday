@@ -23,8 +23,9 @@
     <div class="max-w-6xl mx-auto mt-8 px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
         
         <!-- SISI KIRI: FORM PENDAFTARAN SISWA & INFO KUOTA -->
+<!-- SISI KIRI: KELOLA KELAS, FORM PENDAFTARAN & INFO KUOTA -->
         <div class="space-y-4">
-            <!-- Card Info Kuota -->
+            <!-- 1. Card Info Kuota -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <span class="text-[10px] uppercase font-black text-indigo-500 tracking-wider">Status Paket Langganan</span>
                 <h3 class="font-bold text-gray-800 text-base mt-0.5 capitalize">{{ str_replace('_', ' ', $instansi->subscription) }}</h3>
@@ -42,18 +43,48 @@
                 @endif
             </div>
 
-            <!-- Form Daftarkan Siswa -->
+            <!-- 2. CARD BARU: MASTER KELAS INSTANSI -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xs font-bold text-gray-800 uppercase tracking-wider">Master Daftar Kelas</h2>
+                    <span class="text-[10px] bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded-md">{{ $classGroups->count() }} Kelas</span>
+                </div>
+
+                <!-- Form Tambah Nama Kelas Baru -->
+                <form action="{{ route('admin.classes.store') }}" method="POST" class="flex gap-2">
+                    @csrf
+                    <input type="text" name="name" required placeholder="Tambah Kelas (ex: X IPA 1)" 
+                           class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-bold uppercase">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition shrink-0 cursor-pointer">
+                        + Tambah
+                    </button>
+                </form>
+
+                <!-- List Chip Daftar Kelas -->
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    @forelse($classGroups as $cg)
+                        <div class="inline-flex items-center gap-1.5 bg-gray-100 border border-gray-200 text-gray-700 text-[10px] font-bold px-2.5 py-1 rounded-lg">
+                            <span>{{ $cg->name }}</span>
+                            <form action="{{ route('admin.classes.destroy', $cg->id) }}" method="POST" class="inline">
+                                @csrf @method('DELETE')
+                                <button type="submit" onclick="return confirm('Hapus kelas {{ $cg->name }}?')" class="text-gray-400 hover:text-red-500 font-bold cursor-pointer">&times;</button>
+                            </form>
+                        </div>
+                    @empty
+                        <p class="text-[11px] text-gray-400 italic">Belum ada daftar kelas. Tambahkan kelas di atas terlebih dahulu.</p>
+                    @endforelse
+                </div>
+            </div>
+
+            <!-- 3. Form Daftarkan Siswa -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h2 class="text-base font-bold text-gray-800 mb-4">Daftarkan Siswa Baru</h2>
                 
                 @if(session('success'))
                     <div class="bg-green-100 text-green-700 p-3 rounded mb-4 text-xs font-semibold">{{ session('success') }}</div>
                 @endif
-
-                @if($errors->has('limit_reached'))
-                    <div class="bg-red-50 border border-red-200 text-red-600 p-3 rounded-xl mb-4 text-xs font-semibold leading-relaxed">
-                        {{ $errors->first('limit_reached') }}
-                    </div>
+                @if(session('error'))
+                    <div class="bg-red-100 text-red-700 p-3 rounded mb-4 text-xs font-semibold">{{ session('error') }}</div>
                 @endif
 
                 <form action="{{ route('admin.students.store') }}" method="POST" class="space-y-4">
@@ -68,12 +99,18 @@
                         <input type="email" name="email" required placeholder="siswa@sekolah.com" 
                                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500">
                     </div>
-                    <!-- INPUT FIELD BARU: KELAS SISWA -->
+
+                    <!-- DROPDOWN BARU: PILIH KELAS DARI MASTER DATA -->
                     <div>
-                        <label class="block text-gray-600 text-xs font-semibold mb-1">Kelas Binaan</label>
-                        <input type="text" name="class_group" placeholder="Contoh: X-IPA-1, XII-IPS-3" 
-                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-bold text-indigo-600 placeholder-gray-300">
+                        <label class="block text-gray-600 text-xs font-semibold mb-1">Pilih Kelas Binaan</label>
+                        <select name="class_group" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500 font-bold text-indigo-600 bg-indigo-50/30">
+                            <option value="">-- Pilih Kelas --</option>
+                            @foreach($classGroups as $cg)
+                                <option value="{{ $cg->name }}">{{ $cg->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
+
                     <div>
                         <label class="block text-gray-600 text-xs font-semibold mb-1">Password Awal</label>
                         <input type="text" name="password" required placeholder="Minimal 6 Karakter" 
@@ -98,7 +135,7 @@
                             <th class="py-3 px-3">Nama Siswa</th>
                             <th class="py-3 px-3">Kelas</th> <!-- 👈 KOLOM BARU -->
                             <th class="py-3 px-3">Email / Username</th>
-                            <th class="py-3 px-3">Password Mentah</th>
+                            <th class="py-3 px-3">Password</th>
                             <th class="py-3 px-3 text-center">Aksi</th>
                         </tr>
                     </thead>

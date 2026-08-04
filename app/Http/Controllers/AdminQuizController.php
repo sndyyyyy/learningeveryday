@@ -17,15 +17,16 @@ class AdminQuizController extends Controller
     {
         $user = auth()->user();
 
-        // JIKA SUPER ADMIN: Tampilkan semua kuis yang ada di sistem
         if ($user->role === 'super_admin') {
             $quizzes = Quiz::latest()->get();
+            $classGroups = collect(); // Super Admin tidak perlu
         } else {
-            // JIKA ADMIN INSTANSI: Hanya tampilkan kuis yang dibuat oleh akun dia sendiri
             $quizzes = Quiz::where('created_by', $user->id)->latest()->get();
+            // Tarik Master Kelas milik instansi ini
+            $classGroups = \App\Models\ClassGroup::where('instansi_id', $user->id)->oldest('name')->get();
         }
 
-        return view('admin.quiz.index', compact('quizzes'));
+        return view('admin.quiz.index', compact('quizzes', 'classGroups'));
     }
 
     // Menyimpan Kuis Baru dengan Label Akses Tier

@@ -8,31 +8,54 @@
     }
 </style>
 
+@php
+    // TARIK DATA LOGO SEKOLAH (JIKA USER ADALAH SISWA BINAAN INSTANSI)
+    $instansi = Auth::user()->instansi_id 
+        ? \App\Models\User::find(Auth::user()->instansi_id) 
+        : null;
+@endphp
+
 <nav class="bg-white shadow-sm px-4 md:px-8 py-3 flex justify-between items-center sticky top-0 z-40 h-16">
     
     <div class="flex items-center">
+        <!-- Tombol Hamburger Mobile -->
         <button onclick="toggleSidebar()" class="text-gray-600 hover:text-indigo-600 p-2 focus:outline-none cursor-pointer md:hidden flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
             </svg>
         </button>
         
-        <div class="hidden md:flex items-center space-x-2">
-            <img src="{{ asset('images/le.jpg') }}" alt="Logo" 
-                 onerror="this.onerror=null; this.src='https://placehold.co/40x40/4f46e5/white?text=LE';" 
-                 class="w-8 h-8 object-contain rounded-lg shadow-sm" />
-            <span class="text-base font-bold text-gray-800 tracking-wide">learning<span class="text-indigo-600">everyday</span></span>
+        <!-- LOGO DYNAMIC DESKTOP (PRIDE SCHOOL / WHITE LABEL) -->
+        <div class="hidden md:flex items-center space-x-2.5">
+            @if($instansi && $instansi->school_logo)
+                <img src="{{ asset('storage/' . $instansi->school_logo) }}" alt="Logo Sekolah" 
+                     class="w-8 h-8 object-contain rounded-lg shadow-xs" />
+                <span class="text-base font-bold text-gray-800 tracking-wide">{{ $instansi->name }}</span>
+            @else
+                <img src="{{ asset('images/le.jpg') }}" alt="Logo" 
+                     onerror="this.onerror=null; this.src='https://placehold.co/40x40/4f46e5/white?text=LE';" 
+                     class="w-8 h-8 object-contain rounded-lg shadow-xs" />
+                <span class="text-base font-bold text-gray-800 tracking-wide">learning<span class="text-indigo-600">everyday</span></span>
+            @endif
         </div>
     </div>
 
     <div class="flex items-center">
+        <!-- LOGO DYNAMIC MOBILE (PRIDE SCHOOL / WHITE LABEL) -->
         <div class="flex md:hidden items-center space-x-2">
-            <img src="{{ asset('images/le.jpg') }}" alt="Logo" 
-                 onerror="this.onerror=null; this.src='https://placehold.co/40x40/4f46e5/white?text=LE';" 
-                 class="w-7 h-7 object-contain rounded-lg shadow-sm" />
-            <span class="text-sm font-bold text-gray-800 tracking-wide">learning<span class="text-indigo-600">everyday</span></span>
+            @if($instansi && $instansi->school_logo)
+                <img src="{{ asset('storage/' . $instansi->school_logo) }}" alt="Logo Sekolah" 
+                     class="w-7 h-7 object-contain rounded-lg shadow-xs" />
+                <span class="text-sm font-bold text-gray-800 tracking-wide">{{ $instansi->name }}</span>
+            @else
+                <img src="{{ asset('images/le.jpg') }}" alt="Logo" 
+                     onerror="this.onerror=null; this.src='https://placehold.co/40x40/4f46e5/white?text=LE';" 
+                     class="w-7 h-7 object-contain rounded-lg shadow-xs" />
+                <span class="text-sm font-bold text-gray-800 tracking-wide">learning<span class="text-indigo-600">everyday</span></span>
+            @endif
         </div>
 
+        <!-- MENU TENGAH DESKTOP -->
         <div class="hidden md:flex space-x-8 items-center">
             <a href="{{ route('peserta.dashboard') }}" 
                class="{{ Request::routeIs('peserta.dashboard') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
@@ -49,6 +72,7 @@
         </div>
     </div>
 
+    <!-- AREA KANAN: TOMBOL LOGOUT -->
     <div class="flex items-center">
         <form action="{{ route('logout') }}" method="POST" onsubmit="return confirm('Apakah kamu yakin ingin keluar dari sistem?')">
             @csrf
@@ -62,8 +86,10 @@
     </div>
 </nav>
 
+<!-- SIDEBAR OVERLAY MOBILE -->
 <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/40 z-50 hidden opacity-0 transition-opacity duration-300 backdrop-blur-xs"></div>
 
+<!-- SIDEBAR DRAWER MOBILE -->
 <div id="sidebar-drawer" class="fixed top-0 left-0 bottom-0 w-64 bg-white z-50 -translate-x-full transition-transform duration-300 ease-in-out shadow-2xl flex flex-col">
     <div class="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
         <span class="font-bold text-gray-700 text-sm">Menu Navigasi</span>
@@ -91,17 +117,17 @@
             <span>Daftar Kuis</span>
         </a>
 
-            <a href="{{ route('peserta.riwayat.index') }}" 
-            class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('peserta.riwayat.index') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span>Riwayat Kuis</span>
-            </a>
+        <a href="{{ route('peserta.riwayat.index') }}" 
+           class="flex items-center space-x-3 p-3 rounded-xl transition text-sm {{ Request::routeIs('peserta.riwayat.index') ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-gray-600 hover:bg-gray-50 font-medium' }}">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>Riwayat Kuis</span>
+        </a>
     </div>
     
     <div class="p-4 border-t border-gray-100 text-center">
-        <p class="text-[10px] text-gray-400 font-medium">v1.0 &bull; Admin Mode</p>
+        <p class="text-[10px] text-gray-400 font-medium">v1.0 &bull; Student Mode</p>
     </div>
 </div>
 
@@ -124,4 +150,4 @@
             }, 300);
         }
     }
-</script>   
+</script>

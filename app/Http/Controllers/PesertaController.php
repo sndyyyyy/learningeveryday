@@ -19,9 +19,14 @@ class PesertaController extends Controller
         $superAdminId = 1; 
 
         // 1. FILTER QUIS (Logika Tahap 6 - Isolasi Baru)
-        if ($user->instansi_id !== null) {
-            // 🏫 SISWA INSTANSI
+if ($user->instansi_id !== null) {
+            // 🏫 SISWA INSTANSI: Tampilkan kuis buatan sekolahnya yang kelasnya COCOK dengan siswa,
+            // ATAU kuis yang class_group-nya NULL (diperuntukkan bagi semua kelas di sekolah tersebut)
             $quizzes = Quiz::where('created_by', $user->instansi_id)
+                           ->where(function($query) use ($user) {
+                               $query->where('class_group', $user->class_group)
+                                     ->orWhereNull('class_group');
+                           })
                            ->latest()
                            ->get();
         } elseif ($user->subscription === 'siswa_khusus') {
@@ -63,9 +68,14 @@ class PesertaController extends Controller
         $superAdminId = 1; 
 
         // Terapkan isolasi query yang sama persis seperti di dashboard utama
-        if ($user->instansi_id !== null) {
-            // 🏫 SISWA INSTANSI
+if ($user->instansi_id !== null) {
+            // 🏫 SISWA INSTANSI: Tampilkan kuis buatan sekolahnya yang kelasnya COCOK dengan siswa,
+            // ATAU kuis yang class_group-nya NULL (diperuntukkan bagi semua kelas di sekolah tersebut)
             $quizzes = Quiz::where('created_by', $user->instansi_id)
+                           ->where(function($query) use ($user) {
+                               $query->where('class_group', $user->class_group)
+                                     ->orWhereNull('class_group');
+                           })
                            ->latest()
                            ->get();
         } elseif ($user->subscription === 'siswa_khusus') {
@@ -100,6 +110,11 @@ class PesertaController extends Controller
         if ($user->instansi_id !== null) {
             if ($quiz->created_by !== $user->instansi_id) {
                 abort(403, 'Anda tidak memiliki hak akses untuk mengerjakan kuis instansi lain.');
+            }
+
+            // ⛔ PENTING: Cegah Amin mengerjakan kuis Nima via direct URL
+            if ($quiz->class_group !== null && $quiz->class_group !== $user->class_group) {
+                abort(403, 'Kuis ini khusus ditujukan untuk kelas: ' . $quiz->class_group);
             }
         } else {
             if ($quiz->created_by !== $superAdminId) {
