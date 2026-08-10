@@ -7,6 +7,8 @@ use App\Models\BankPart;
 use App\Models\BankQuestion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\BankQuestionImport;
 
 class QuestionBankController extends Controller
 {
@@ -88,225 +90,189 @@ class QuestionBankController extends Controller
     }
 
     public function showBankQuestions(BankPart $part)
-{
-    // Mengambil data wadah bank soal utamanya untuk info di breadcrumb UI
-    $bank = $part->questionBank;
-    
-    // Mengambil seluruh soal yang terikat ke part ini
-    $questions = BankQuestion::where('bank_part_id', $part->id)->latest()->get();
-
-    return view('admin.bank.questions', compact('bank', 'part', 'questions'));
-}
-
-// 2. Menyimpan Soal ke Bank Soal secara Manual 1-per-1
-public function storeBankQuestion(Request $request, BankPart $part)
-{
-    // Validasi dibikin dinamis tergantung tipe soal
-    $request->validate([
-        'type' => 'required|in:multiple_choice,essay',
-        'question_text' => 'required|string',
-        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
-        'explanation' => 'nullable|string',
+    {
+        // Mengambil data wadah bank soal utamanya untuk info di breadcrumb UI
+        $bank = $part->questionBank;
         
-        // Pilihan ganda hanya wajib kalau tipenya multiple_choice
-        'option_a' => 'required_if:type,multiple_choice',
-        'option_b' => 'required_if:type,multiple_choice',
-        'option_c' => 'required_if:type,multiple_choice',
-        'option_d' => 'required_if:type,multiple_choice',
-        'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
-        
-        // Kunci jawaban essay hanya wajib kalau tipenya essay
-        'correct_answer_essay' => 'required_if:type,essay|string|nullable',
-    ]);
+        // Mengambil seluruh soal yang terikat ke part ini
+        $questions = BankQuestion::where('bank_part_id', $part->id)->latest()->get();
 
-    $imagePath = $request->hasFile('image') ? $request->file('image')->store('bank/images', 'public') : null;
-    $audioPath = $request->hasFile('audio') ? $request->file('audio')->store('bank/audios', 'public') : null;
-
-    // Persiapan variabel data
-    $options = [];
-    $correctAnswer = null;
-
-    if ($request->type === 'multiple_choice') {
-        $options = [
-            'A' => $request->option_a,
-            'B' => $request->option_b,
-            'C' => $request->option_c,
-            'D' => $request->option_d,
-        ];
-        $correctAnswer = $request->correct_answer_mc;
-    } else {
-        // Mode Essay: Pecah jawaban berdasarkan koma lalu simpan ke format JSON array
-        // Misal input: "Soekarno, Hatta" -> tersimpan: ["Soekarno", "Hatta"]
-        $answersArray = array_map('trim', explode(',', $request->correct_answer_essay));
-        $correctAnswer = json_encode($answersArray);
+        return view('admin.bank.questions', compact('bank', 'part', 'questions'));
     }
 
-    BankQuestion::create([
-        'bank_part_id' => $part->id,
-        'type' => $request->type,
-        'question_text' => $request->question_text,
-        'image' => $imagePath,
-        'audio' => $audioPath,
-        'options' => $options,
-        'correct_answer' => $correctAnswer,
-        'explanation' => $request->explanation,
-    ]);
+    // 2. Menyimpan Soal ke Bank Soal secara Manual 1-per-1
+    public function storeBankQuestion(Request $request, BankPart $part)
+    {
+        // Validasi dibikin dinamis tergantung tipe soal
+        $request->validate([
+            'type' => 'required|in:multiple_choice,essay',
+            'question_text' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
+            'explanation' => 'nullable|string',
+            
+            // Pilihan ganda hanya wajib kalau tipenya multiple_choice
+            'option_a' => 'required_if:type,multiple_choice',
+            'option_b' => 'required_if:type,multiple_choice',
+            'option_c' => 'required_if:type,multiple_choice',
+            'option_d' => 'required_if:type,multiple_choice',
+            'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
+            
+            // Kunci jawaban essay hanya wajib kalau tipenya essay
+            'correct_answer_essay' => 'required_if:type,essay|string|nullable',
+        ]);
 
-    return redirect()->back()->with('success', 'Soal baru berhasil ditambahkan ke Bank Soal!');
-}
+        $imagePath = $request->hasFile('image') ? $request->file('image')->store('bank/images', 'public') : null;
+        $audioPath = $request->hasFile('audio') ? $request->file('audio')->store('bank/audios', 'public') : null;
 
-// 3. Placeholder Sementara untuk Import Excel (Biar rute tidak error pas di-klik)
-// Ganti fungsi importExcelPlaceholder lama dengan kode ini:
-public function importExcelPlaceholder(Request $request, BankPart $part)
-{
-    $request->validate([
-        'excel_file' => 'required|file|mimes:csv,txt,xlsx,xls|max:2048'
-    ]);
+        // Persiapan variabel data
+        $options = [];
+        $correctAnswer = null;
 
-    $file = $request->file('excel_file');
-    $extension = $file->getClientOriginalExtension();
-
-    if (in_array($extension, ['csv', 'txt'])) {
-        $path = $file->getRealPath();
-        
-        if (($handle = fopen($path, "r")) !== FALSE) {
-            // Lewati baris pertama (Header Excel)
-            fgetcsv($handle, 1000, ","); 
-
-            $rowCount = 0;
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                // Pastikan minimal ada 6 kolom terisi/terdeteksi
-                if (count($data) >= 6) {
+        if ($request->type === 'multiple_choice') {
+            $options = [
+                'A' => $request->option_a,
+                'B' => $request->option_b,
+                'C' => $request->option_c,
+                'D' => $request->option_d,
+            ];
+            $correctAnswer = $request->correct_answer_mc;
+        } else {
+            // Mode Essay Multi-Blank & Multi-Alias:
+            // 1. Pecah berdasarkan pemisah antar-blank ('|' atau ';')
+            $rawBlanks = array_map('trim', preg_split('/[|;]/', $request->correct_answer_essay));
+            
+            $parsedAnswers = [];
+            foreach ($rawBlanks as $blank) {
+                if (!empty($blank)) {
+                    // 2. Pecah variasi alias dalam 1 blank berdasarkan ('/' atau ',')
+                    $aliases = array_map(function($item) {
+                        return mb_strtolower(trim($item));
+                    }, preg_split('/[\/,]/', $blank));
                     
-                    $questionText = trim($data[0]);
-                    $optA = trim($data[1]);
-                    $optB = trim($data[2]);
-                    $optC = trim($data[3]);
-                    $optD = trim($data[4]);
-                    $rawAnswer = trim($data[5]);
-                    $explanation = isset($data[6]) ? trim($data[6]) : null;
-
-                    // === 🧠 LOGIKA SMART DETECT: Pilihan Ganda vs Essay ===
-                    // Jika Opsi A kosong atau isinya cuma tanda strip (-), jadikan Mode Essay
-                    $isEssay = empty($optA) || $optA === '-';
-
-                    if ($isEssay) {
-                        $type = 'essay';
-                        $options = []; // Kosongkan array options
-                        
-                        // Pecah jawaban (yang dipisah koma) menjadi JSON Array
-                        $answersArray = array_map('trim', explode(',', $rawAnswer));
-                        $correctAnswer = json_encode($answersArray);
-                    } else {
-                        $type = 'multiple_choice';
-                        $options = [
-                            'A' => $optA,
-                            'B' => $optB,
-                            'C' => $optC,
-                            'D' => $optD,
-                        ];
-                        // Pastikan format kunci jawaban selalu huruf besar (A/B/C/D)
-                        $correctAnswer = strtoupper($rawAnswer); 
-                    }
-
-                    // Eksekusi Simpan ke Database
-                    BankQuestion::create([
-                        'bank_part_id' => $part->id,
-                        'type' => $type,
-                        'question_text' => $questionText,
-                        'options' => $options,
-                        'correct_answer' => $correctAnswer,
-                        'explanation' => $explanation,
-                        'image' => null, 
-                        'audio' => null 
-                    ]);
-                    $rowCount++;
+                    $parsedAnswers[] = array_values(array_filter($aliases));
                 }
             }
-            fclose($handle);
-            
-            return redirect()->back()->with('success', "Berhasil mengimpor {$rowCount} soal secara massal dari file CSV!");
+            $correctAnswer = json_encode($parsedAnswers);
         }
-    } 
-    
-    if (in_array($extension, ['xlsx', 'xls'])) {
-        return redirect()->back()->with('error', 'Untuk import yang optimal, silakan "Save As" file Excel Anda ke format .CSV (Comma Delimited) terlebih dahulu lalu upload kembali!');
+
+        BankQuestion::create([
+            'bank_part_id' => $part->id,
+            'type' => $request->type,
+            'question_text' => $request->question_text,
+            'image' => $imagePath,
+            'audio' => $audioPath,
+            'options' => $options,
+            'correct_answer' => $correctAnswer,
+            'explanation' => $request->explanation,
+        ]);
+
+        return redirect()->back()->with('success', 'Soal baru berhasil ditambahkan ke Bank Soal!');
     }
 
-    return redirect()->back()->with('error', 'Format file tidak didukung.');
-}
+    public function importExcelPlaceholder(Request $request, BankPart $part)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:2048'
+        ]);
 
-// ===================================================
-// FUNGSI BARU 1: UPDATE DATA SOAL DI BANK SOAL
-// ===================================================
-public function updateBankQuestion(Request $request, BankQuestion $question)
-{
-    $request->validate([
-        'question_text' => 'required|string',
-        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        // Tetap gunakan extensions agar format audio modern aman dari bug mime-type OS
-        'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
-        'option_a' => 'required|string',
-        'option_b' => 'required|string',
-        'option_c' => 'required|string',
-        'option_d' => 'required|string',
-        'correct_answer' => 'required|in:A,B,C,D',
-        'explanation' => 'nullable|string',
-    ]);
+        try {
+            Excel::import(new BankQuestionImport($part->id), $request->file('excel_file'));
 
-    // Manajemen File Gambar Lama & Baru
-    if ($request->hasFile('image')) {
+            return redirect()->back()->with('success', 'Berhasil mengimpor koleksi soal secara massal dari file Excel!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal mengimpor file Excel. Pastikan struktur kolom sesuai dengan template.');
+        }
+    }
+
+    // ===================================================
+    // FUNGSI UPDATE DATA SOAL DI BANK SOAL
+    // ===================================================
+    public function updateBankQuestion(Request $request, BankQuestion $question)
+    {
+        $request->validate([
+            'type' => 'required|in:multiple_choice,essay',
+            'question_text' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
+            'explanation' => 'nullable|string',
+            'option_a' => 'required_if:type,multiple_choice',
+            'option_b' => 'required_if:type,multiple_choice',
+            'option_c' => 'required_if:type,multiple_choice',
+            'option_d' => 'required_if:type,multiple_choice',
+            'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
+            'correct_answer_essay' => 'required_if:type,essay|string|nullable',
+        ]);
+
+        // Manajemen File Gambar
+        if ($request->hasFile('image')) {
+            if ($question->image) {
+                Storage::disk('public')->delete($question->image);
+            }
+            $question->image = $request->file('image')->store('bank/images', 'public');
+        }
+
+        // Manajemen File Audio
+        if ($request->hasFile('audio')) {
+            if ($question->audio) {
+                Storage::disk('public')->delete($question->audio);
+            }
+            $question->audio = $request->file('audio')->store('bank/audios', 'public');
+        }
+
+        $options = [];
+        $correctAnswer = null;
+
+        if ($request->type === 'multiple_choice') {
+            $options = [
+                'A' => $request->option_a,
+                'B' => $request->option_b,
+                'C' => $request->option_c,
+                'D' => $request->option_d,
+            ];
+            $correctAnswer = $request->correct_answer_mc;
+        } else {
+            $rawBlanks = array_map('trim', preg_split('/[|;]/', $request->correct_answer_essay));
+            $parsedAnswers = [];
+            foreach ($rawBlanks as $blank) {
+                if (!empty($blank)) {
+                    $aliases = array_map(function($item) {
+                        return mb_strtolower(trim($item));
+                    }, preg_split('/[\/,]/', $blank));
+                    $parsedAnswers[] = array_values(array_filter($aliases));
+                }
+            }
+            $correctAnswer = json_encode($parsedAnswers);
+        }
+
+        $question->update([
+            'type' => $request->type,
+            'question_text' => $request->question_text,
+            'image' => $question->image,
+            'audio' => $question->audio,
+            'options' => $options,
+            'correct_answer' => $correctAnswer,
+            'explanation' => $request->explanation,
+        ]);
+
+        return redirect()->back()->with('success', 'Soal di Bank Soal berhasil diperbarui!');
+    }
+
+    // ===================================================
+    // FUNGSI HAPUS SOAL PERMANEN DARI BANK SOAL
+    // ===================================================
+    public function destroyBankQuestion(BankQuestion $question)
+    {
         if ($question->image) {
             Storage::disk('public')->delete($question->image);
         }
-        $question->image = $request->file('image')->store('bank/images', 'public');
-    }
 
-    // Manajemen File Audio Lama & Baru
-    if ($request->hasFile('audio')) {
         if ($question->audio) {
             Storage::disk('public')->delete($question->audio);
         }
-        $question->audio = $request->file('audio')->store('bank/audios', 'public');
+
+        $question->delete();
+
+        return redirect()->back()->with('success', 'Soal berhasil dihapus dari Bank Soal!');
     }
-
-    // Update data teks dasar & Array Pilihan Ganda (options)
-    $question->update([
-        'question_text' => $request->question_text,
-        'image' => $question->image,
-        'audio' => $question->audio,
-        'options' => [
-            'A' => $request->option_a,
-            'B' => $request->option_b,
-            'C' => $request->option_c,
-            'D' => $request->option_d,
-        ],
-        'correct_answer' => $request->correct_answer,
-        'explanation' => $request->explanation,
-    ]);
-
-    return redirect()->back()->with('success', 'Soal di Bank Soal berhasil diperbarui!');
-}
-
-// ===================================================
-// FUNGSI BARU 2: HAPUS SOAL PERMANEN DARI BANK SOAL
-// ===================================================
-public function destroyBankQuestion(BankQuestion $question)
-{
-    // Hapus file fisik gambar di storage server agar tidak jadi sampah penyimpanan
-    if ($question->image) {
-        Storage::disk('public')->delete($question->image);
-    }
-
-    // Hapus file fisik audio di storage server
-    if ($question->audio) {
-        Storage::disk('public')->delete($question->audio);
-    }
-
-    // Hapus baris data dari database
-    $question->delete();
-
-    return redirect()->back()->with('success', 'Soal berhasil dihapus dari Bank Soal!');
-}
 }

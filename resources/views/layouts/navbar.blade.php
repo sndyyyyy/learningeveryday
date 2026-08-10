@@ -72,6 +72,10 @@
                    class="{{ Request::routeIs('admin.quiz.index') || Request::routeIs('admin.quiz.questions') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
                     Kelola Kuis
                 </a>
+               <a href="{{ route('admin.special_tests.index') }}" 
+                class="{{ Request::routeIs('admin.special_tests.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+                    Kelola Tes Khusus
+                </a>
                 <a href="{{ route('admin.approval.index') }}" 
                    class="{{ Request::routeIs('admin.approval.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
                     Persetujuan Akun

@@ -12,6 +12,7 @@
 
     <div class="max-w-6xl mx-auto mt-6 md:mt-8 px-4 pb-16 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
         
+        <!-- SISI KIRI: INPUT SOAL & TARIK BANK -->
         <div class="md:col-span-1 flex flex-col space-y-6">
             
             <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm h-fit border border-gray-100">
@@ -68,10 +69,14 @@
                         </div>
                     </div>
 
-                    <div id="container-essay" class="hidden bg-amber-50 p-3 rounded-lg border border-amber-200">
-                        <label class="block text-amber-800 text-xs font-bold mb-1">Kunci Jawaban Isian</label>
-                        <p class="text-[10px] text-amber-600 mb-2">Pisahkan dengan koma (,). Contoh: <b>Jakarta, 1945</b></p>
-                        <input type="text" name="correct_answer_essay" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-xs focus:outline-none">
+                    <div id="container-essay" class="hidden bg-amber-50 p-3 rounded-lg border border-amber-200 space-y-2">
+                        <label class="block text-amber-800 text-xs font-bold">Kunci Jawaban Isian</label>
+                        <p class="text-[10px] text-amber-700 leading-normal">
+                            • Pemisah antar-blank gunakan <b>|</b><br>
+                            • Variasi sinonim jawaban gunakan <b>/</b><br>
+                            <i>Contoh: <b>Bandung / Bandoeng | Jawa Barat / Jabar</b></i>
+                        </p>
+                        <input type="text" name="correct_answer_essay" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-xs focus:outline-none bg-white font-medium">
                     </div>
 
                     <div class="border border-indigo-100 bg-indigo-50/30 p-3 rounded-xl space-y-3">
@@ -126,17 +131,45 @@
             
         </div>
 
-        <div class="md:col-span-2 bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
-            <h2 class="text-base md:text-lg font-bold text-gray-800 mb-4">Daftar Soal Kuis: <span class="text-indigo-600">{{ $quiz->title }}</span></h2>
+        <!-- SISI KANAN: DAFTAR SOAL KUIS & AKSI GLOBAL -->
+        <div class="md:col-span-2 bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 h-fit space-y-6">
+            
+            <!-- HEADER DAFTAR SOAL + BARIS TOMBOL PENGATURAN MASSAL (BULK TOGGLE) -->
+            <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-base md:text-lg font-bold text-gray-800">Daftar Soal Kuis: <span class="text-indigo-600">{{ $quiz->title }}</span></h2>
+                    <p class="text-xs text-gray-500 mt-0.5">Total {{ $questions->count() }} Pertanyaan Aktif</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <form action="{{ route('admin.quiz.toggle_all_explanations', $quiz->id) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="status" value="1">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer">
+                            <span>Tampilkan Semua</span>
+                        </button>
+                    </form>
+
+                    <form action="{{ route('admin.quiz.toggle_all_explanations', $quiz->id) }}" method="POST">
+                        @csrf
+                        <input type="hidden" name="status" value="0">
+                        <button type="submit" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer">
+                            <span>Sembunyikan Semua</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- DAFTAR ITEM SOAL -->
             <div class="space-y-6">
                 @forelse($questions as $index => $q)
                     <div class="border-b border-gray-100 pb-6 relative group">
                         
                         <div class="absolute top-0 right-0">
                             @if($q->is_show_explanation)
-                                <span class="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-2 py-0.5 rounded-full">💡 Bahas: Tampil</span>
+                                <span class="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-2 py-0.5 rounded-full">Bahas: Tampil</span>
                             @else
-                                <span class="bg-gray-100 text-gray-500 border border-gray-200 text-[9px] font-bold px-2 py-0.5 rounded-full">🙈 Bahas: Sembunyi</span>
+                                <span class="bg-gray-100 text-gray-500 border border-gray-200 text-[9px] font-bold px-2 py-0.5 rounded-full">Bahas: Sembunyi</span>
                             @endif
                         </div>
 
@@ -152,10 +185,23 @@
                             
                             <div class="flex flex-col gap-1.5 shrink-0 mt-6">
                                 @php
+                                    // PERBAIKAN PARSING KUNCI JAWABAN ESSAY ARRAY 2 DIMENSI
                                     $essayAnswerString = '';
-                                    if($q->type === 'essay' && $q->correct_answer) {
+                                    if ($q->type === 'essay' && $q->correct_answer) {
                                         $decoded = json_decode($q->correct_answer, true);
-                                        $essayAnswerString = is_array($decoded) ? implode(', ', $decoded) : $q->correct_answer;
+                                        if (is_array($decoded)) {
+                                            $blankParts = [];
+                                            foreach ($decoded as $bIdx => $aliases) {
+                                                if (is_array($aliases)) {
+                                                    $blankParts[] = "Blank " . ($bIdx + 1) . ": " . implode(' / ', array_map('ucwords', $aliases));
+                                                } else {
+                                                    $blankParts[] = $aliases;
+                                                }
+                                            }
+                                            $essayAnswerString = implode(' | ', $blankParts);
+                                        } else {
+                                            $essayAnswerString = $q->correct_answer;
+                                        }
                                     }
                                 @endphp
 
@@ -227,6 +273,7 @@
         </div>
     </div>
 
+    <!-- MODAL POPUP EDIT SOAL KUIS -->
     <div id="edit-modal" class="fixed inset-0 bg-black/50 hidden justify-center items-center z-50 backdrop-blur-xs">
         <div class="bg-white p-6 rounded-2xl max-w-lg w-[90%] shadow-2xl overflow-y-auto max-h-[90vh]">
             <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
@@ -285,10 +332,14 @@
                     </div>
                 </div>
 
-                <div id="edit_container_essay" class="hidden bg-amber-50 p-3 rounded-lg border border-amber-200">
-                    <label class="block text-amber-800 text-[11px] font-bold mb-1">Kunci Jawaban Isian</label>
-                    <p class="text-[10px] text-amber-600 mb-2">Pisahkan jawaban dengan koma (,).</p>
-                    <input type="text" name="correct_answer_essay" id="edit_correct_answer_essay" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-xs focus:outline-none focus:border-amber-500 bg-white">
+                <div id="edit_container_essay" class="hidden bg-amber-50 p-3 rounded-lg border border-amber-200 space-y-2">
+                    <label class="block text-amber-800 text-[11px] font-bold">Kunci Jawaban Isian</label>
+                    <p class="text-[10px] text-amber-700 leading-normal">
+                        • Pemisah antar-blank gunakan <b>|</b><br>
+                        • Variasi sinonim jawaban gunakan <b>/</b><br>
+                        <i>Contoh: <b>Bandung / Bandoeng | Jawa Barat / Jabar</b></i>
+                    </p>
+                    <input type="text" name="correct_answer_essay" id="edit_correct_answer_essay" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-xs focus:outline-none focus:border-amber-500 bg-white font-medium">
                 </div>
 
                 <div class="border border-indigo-100 bg-indigo-50/30 p-3 rounded-xl space-y-3">

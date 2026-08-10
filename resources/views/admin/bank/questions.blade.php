@@ -111,7 +111,7 @@
                 </form>
             </div>
 
-<div id="container-import-excel" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+{{-- <div id="container-import-excel" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
     <h3 class="text-sm font-bold text-gray-800 mb-1 flex items-center space-x-1">
         <span>📊</span> <span>Metode 2: Import dari Excel (.CSV)</span>
     </h3>
@@ -132,6 +132,41 @@
         </div>
         <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-sm">
             🚀 Jalankan Import File CSV
+        </button>
+    </form>
+</div> --}}
+
+<div id="container-import-excel" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+    <h3 class="text-sm font-bold text-gray-800 mb-1 flex items-center space-x-1">
+        <span>📊</span> <span>Metode 2: Import dari Excel (.XLSX)</span>
+    </h3>
+    
+    <!-- PANDUAN & TOMBOL DOWNLOAD TEMPLATE -->
+    <div class="text-[10px] text-gray-500 mb-3 leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2">
+        <p class="font-bold text-gray-700">Format Header Excel (Baris 1):</p>
+        <div class="text-indigo-600 font-mono font-bold bg-indigo-50 px-2 py-1 rounded leading-normal">
+            Soal | Opsi A | Opsi B | Opsi C | Opsi D | Jawaban Benar | Pembahasan
+        </div>
+        <ul class="list-disc pl-4 text-gray-500 space-y-0.5 pt-1">
+            <li><b>Pilihan Ganda:</b> Isi opsi A-D. Kolom Jawaban Benar diisi huruf <b>A/B/C/D</b>.</li>
+            <li><b>Essay:</b> Kosongkan Opsi A-D (atau isi tanda strip <code class="bg-gray-200 px-1 rounded">-</code>). Kolom Jawaban Benar diisi teks (pisahkan koma jika lebih dari 1 kata). Sisipkan <b>[blank]</b> di pertanyaan.</li>
+        </ul>
+
+        <div class="pt-1">
+            <a href="{{ asset('templates/template_soal.xlsx') }}" download 
+               class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-bold hover:underline">
+                <span>📥 Download Template Soal Excel (.xlsx)</span>
+            </a>
+        </div>
+    </div>
+    
+    <form action="{{ route('admin.bank.questions.import', $part->id) }}" method="POST" enctype="multipart/form-data" class="space-y-3">
+        @csrf
+        <div class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center bg-white hover:bg-gray-50 transition cursor-pointer">
+            <input type="file" name="excel_file" required accept=".xlsx, .xls, .csv" class="w-full text-xs text-gray-500 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 file:border-0 file:rounded-md file:px-3 file:py-1.5 cursor-pointer">
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-sm cursor-pointer">
+            🚀 Import Soal dari Excel
         </button>
     </form>
 </div>

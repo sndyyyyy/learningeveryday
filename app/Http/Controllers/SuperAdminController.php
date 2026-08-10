@@ -29,10 +29,11 @@ class SuperAdminController extends Controller
     // 3. Aksi untuk Menolak Pendaftar (Reject)
     public function reject(User $user)
     {
-        $user->update([
-            'account_status' => 'rejected'
-        ]);
+        $name = $user->name;
+        
+        // Hapus baris user dari database agar email/username bisa didaftarkan ulang
+        $user->delete();
 
-        return redirect()->back()->with('success', "Pengajuan akun dari {$user->name} telah ditolak.");
+        return redirect()->back()->with('success', "Pengajuan akun dari {$name} telah ditolak dan datanya berhasil dibersihkan.");
     }
 }

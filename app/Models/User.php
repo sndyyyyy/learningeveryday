@@ -40,10 +40,15 @@ class User extends Authenticatable
         'instansi_id',     
         'class_group',
         'school_logo',
+        'special_test_id',
     ];
     public function students()
     {
         return $this->hasMany(User::class, 'instansi_id');
     }
-    
+
+    public function specialTest()
+{
+    return $this->belongsTo(SpecialTest::class, 'special_test_id');
+}
 }

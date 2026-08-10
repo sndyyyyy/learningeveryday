@@ -11,6 +11,7 @@ use App\Http\Controllers\QuestionBankController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SubUserController;
 use App\Http\Controllers\ClassGroupController;
+use App\Http\Controllers\SpecialTestController;
 
 
 // Route::get('/', function () {
@@ -46,9 +47,14 @@ Route::middleware(['auth', 'role:super_admin,admin'])->group(function () {
     Route::get('/admin/quiz/{quiz}/questions', [AdminQuizController::class, 'showQuestions'])->name('admin.quiz.questions');
     Route::post('/admin/quiz/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])->name('admin.quiz.questions.store');
     Route::delete('/admin/quiz/{quiz}', [AdminQuizController::class, 'destroyQuiz'])->name('admin.quiz.destroy');
+    Route::post('/admin/quiz/{quiz}/toggle-all-explanations', [AdminQuizController::class, 'toggleAllExplanations'])->name('admin.quiz.toggle_all_explanations');
+    Route::get('/admin/quiz/{quiz}/report-data', [AdminQuizController::class, 'getQuizReportData'])->name('admin.quiz.report_data');
+    Route::get('/admin/quiz/{quiz}/export-pdf', [AdminQuizController::class, 'exportQuizPdf'])->name('admin.quiz.export_pdf');
     Route::put('/admin/question/{question}', [AdminQuizController::class, 'updateQuestion'])->name('admin.quiz.questions.update');
     Route::delete('/admin/question/{question}', [AdminQuizController::class, 'destroyQuestion'])->name('admin.quiz.questions.destroy');
     Route::post('/admin/quiz/{quiz}/pull-from-bank', [AdminQuizController::class, 'pullFromBankSoal'])->name('admin.quiz.pull_bank');
+    Route::get('/admin/quiz/{quiz}/export-word', [AdminQuizController::class, 'exportQuizWord'])->name('admin.quiz.export_word');
+
 
     // Pengelolaan Gudang Data Bank Soal
     Route::get('/admin/bank-soal', [QuestionBankController::class, 'index'])->name('admin.bank.index');
@@ -71,6 +77,11 @@ Route::middleware(['auth', 'role:super_admin,admin'])->group(function () {
 // =========================================================================
 Route::middleware(['auth', 'role:super_admin'])->group(function () {
     // Menu Approval Pendaftar Langganan SaaS
+
+    Route::get('/admin/special-tests', [SpecialTestController::class, 'index'])->name('admin.special_tests.index');
+    Route::post('/admin/special-tests/store', [SpecialTestController::class, 'store'])->name('admin.special_tests.store');
+    Route::delete('/admin/special-tests/{specialTest}', [SpecialTestController::class, 'destroy'])->name('admin.special_tests.destroy');
+    Route::post('/admin/special-tests/{specialTest}/participants', [SpecialTestController::class, 'storeParticipant'])->name('admin.special_tests.participant.store');
     Route::get('/admin/approval', [SuperAdminController::class, 'approvalIndex'])->name('admin.approval.index');
     Route::put('/admin/approval/{user}/approve', [SuperAdminController::class, 'approve'])->name('admin.approval.approve');
     Route::put('/admin/approval/{user}/reject', [SuperAdminController::class, 'reject'])->name('admin.approval.reject');

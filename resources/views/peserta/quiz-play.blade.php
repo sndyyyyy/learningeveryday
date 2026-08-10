@@ -324,20 +324,26 @@
           const inputs = document.querySelectorAll('.essay-blank-input');
           let userAnswers = [];
           
-          let correctAnswers = [];
-          try { correctAnswers = JSON.parse(q.correct_answer); } 
-          catch(e) { correctAnswers = [q.correct_answer]; }
+          let correctAnswersGroup = [];
+          try { 
+              correctAnswersGroup = JSON.parse(q.correct_answer); 
+          } catch(e) { 
+              correctAnswersGroup = [[(q.correct_answer || "").trim().toLowerCase()]]; 
+          }
 
           let correctBlanks = 0;
-          let totalBlanks = correctAnswers.length;
+          let totalBlanks = correctAnswersGroup.length;
 
           inputs.forEach((input, index) => {
-              let uAns = input.value.trim();
-              userAnswers.push(uAns);
+              let uAns = input.value.trim().toLowerCase();
+              userAnswers.push(input.value.trim());
 
-              let cAns = (correctAnswers[index] || "").trim();
+              let validAliases = correctAnswersGroup[index] || [];
 
-              if (uAns.toLowerCase() === cAns.toLowerCase()) {
+              // Cek apakah jawaban peserta cocok dengan salah satu alias yang sah
+              let isMatch = Array.isArray(validAliases) && validAliases.includes(uAns);
+
+              if (isMatch) {
                   input.classList.remove("border-indigo-400", "bg-indigo-50/50");
                   input.classList.add("border-emerald-500", "text-emerald-600", "bg-emerald-50");
                   correctBlanks++;
@@ -368,9 +374,6 @@
           setTimeout(() => { showModal(status, q); }, 800);
       }
 
-      // =========================================================
-      // FUNGSI MODAL BARU: MERESPON STATUS is_show_explanation
-      // =========================================================
       function showModal(status, currentQuestion) {
         const modal = document.getElementById("result-modal");
         const modalBox = modal.querySelector('div');
@@ -393,19 +396,15 @@
           statusText.className = "text-lg font-black mb-1 text-red-500";
         }
 
-        // LOGIKA FITUR BARU: Cek Saklar Tampil/Sembunyi
-        // String '1' atau boolean true
         if (currentQuestion.is_show_explanation == 1 || currentQuestion.is_show_explanation == true) {
             btnPelajari.classList.remove("hidden");
             
-            // Merangkai Teks Pembahasan + Link Video Jika Ada
             let expContent = `<p>${currentQuestion.explanation || "Tidak ada teks pembahasan spesifik."}</p>`;
             if (currentQuestion.explanation_link) {
                 expContent += `<div class="mt-3"><a href="${currentQuestion.explanation_link}" target="_blank" class="inline-flex items-center text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-lg text-xs font-bold transition">🎥 Tonton Video Referensi</a></div>`;
             }
             document.getElementById("modal-explanation").innerHTML = expContent;
         } else {
-            // Sembunyikan Tombol Pelajari Sepenuhnya
             btnPelajari.classList.add("hidden");
         }
         
@@ -540,21 +539,23 @@
                   try { userAnsArr = JSON.parse(chosen); } catch(e) { userAnsArr = []; }
                   
                   let corrAnsArr = [];
-                  try { corrAnsArr = JSON.parse(q.correct_answer); } catch(e) { corrAnsArr = [q.correct_answer]; }
+                  try { corrAnsArr = JSON.parse(q.correct_answer); } catch(e) { corrAnsArr = [[q.correct_answer]]; }
 
                   let correctBlanksCount = 0;
 
                   optionsHtml += `<div class="p-2.5 bg-white border border-gray-100 rounded-lg space-y-2">`;
                   for(let i=0; i<corrAnsArr.length; i++) {
                       let u = (userAnsArr[i] || "").trim();
-                      let c = corrAnsArr[i].trim();
-                      let isMatch = (u.toLowerCase() === c.toLowerCase());
+                      let validAliases = corrAnsArr[i] || [];
+                      let isMatch = Array.isArray(validAliases) && validAliases.includes(u.toLowerCase());
                       
                       if(isMatch) correctBlanksCount++;
 
+                      let displayKunci = Array.isArray(validAliases) ? validAliases.join(' / ') : validAliases;
+
                       let statusBadge = isMatch
                           ? `<span class="text-emerald-600 font-bold text-[10px] ml-1 bg-emerald-50 px-1 rounded">✓ Benar</span>`
-                          : `<span class="text-red-500 font-bold text-[10px] ml-1 bg-red-50 px-1 rounded">✗ Salah (Kunci: ${c})</span>`;
+                          : `<span class="text-red-500 font-bold text-[10px] ml-1 bg-red-50 px-1 rounded">✗ Salah (Kunci: ${displayKunci})</span>`;
 
                       optionsHtml += `<p class="text-[11px] text-gray-700"><strong>Isian ${i+1}:</strong> <span class="${isMatch ? 'text-emerald-600 font-bold' : 'text-red-500 line-through'}">${u || 'Kosong'}</span> ${statusBadge}</p>`;
                   }
@@ -598,9 +599,6 @@
                   optionsHtml = `<div class="space-y-0.5 bg-white p-2 rounded-lg border border-gray-100/70 text-[11px]">${optionsHtml}</div>`;
               }
 
-              // ==============================================================
-              // RENDER REVIEW LIST: MERESPON is_show_explanation
-              // ==============================================================
               let explanationSection = '';
               if (q.is_show_explanation == 1 || q.is_show_explanation == true) {
                   let expText = `<p>${q.explanation || "Pembahasan belum tersedia untuk soal ini."}</p>`;

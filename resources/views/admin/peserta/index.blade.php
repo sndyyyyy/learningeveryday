@@ -60,7 +60,7 @@
                 </form>
             </div>
 
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
+            {{-- <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
                 <h2 class="text-lg font-bold text-gray-800 mb-2">Import via Excel (.CSV)</h2>
                 
                 <div class="text-[10px] text-gray-500 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200 leading-relaxed space-y-2">
@@ -90,7 +90,40 @@
                         <span>🚀 Import Data CSV</span>
                     </button>
                 </form>
-            </div>            
+            </div>             --}}
+
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
+                <h2 class="text-lg font-bold text-gray-800 mb-2">Import via Excel (.XLSX)</h2>
+                
+                <div class="text-[10px] text-gray-500 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200 leading-relaxed space-y-2">
+                    <div>
+                        <p class="font-bold text-gray-700 mb-1">Format Header Kolom (Baris 1):</p>
+                        <span class="text-indigo-600 font-mono font-bold bg-indigo-50 px-2 py-0.5 rounded">Nama Lengkap | Email/Username | Password</span>
+                    </div>
+
+                    <div class="pt-1">
+                        <!-- Tautan ke file template Excel .xlsx -->
+                        <a href="{{ asset('templates/template_akunexcel.xlsx') }}" download 
+                        class="inline-flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 font-bold hover:underline transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            <span>Download Template Excel (.xlsx)</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <form action="{{ route('admin.peserta.import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    @csrf
+                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center bg-white hover:bg-gray-50 transition cursor-pointer">
+                        <!-- Menerima file .xlsx, .xls, dan .csv -->
+                        <input type="file" name="excel_file" required accept=".xlsx, .xls, .csv" class="w-full text-xs text-gray-500 file:text-[11px] file:font-bold file:bg-emerald-50 file:text-emerald-700 file:border-0 file:rounded-md file:px-3 file:py-1.5 cursor-pointer">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg transition text-sm cursor-pointer shadow-sm flex justify-center items-center gap-2">
+                        <span>🚀 Import Data Excel</span>
+                    </button>
+                </form>
+            </div>
         </div>
 
         <!-- SISI KANAN: TERBAGI MENJADI 2 TABEL (MANDIRI & INSTANSI) -->

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\SpecialTest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -16,20 +17,30 @@ class AuthController extends Controller
 
     public function showRegister()
     {
-        return view('auth.register');
+        // TARIK SELURUH TES KHUSUS DARI MASTER DATA
+        $specialTests = SpecialTest::oldest('name')->get();
+        return view('auth.register', compact('specialTests'));
     }
 
     public function register(Request $request)
     {
-        // USERNAME/EMAIL BISA SENSITIF & TANPA FORMAT @ WAKTU REGISTRASI
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|max:255|unique:users,email',
             'password' => 'required|string|min:6',
-            'subscription' => 'required|in:siswa_basic,siswa_premium,siswa_khusus,instansi_basic,instansi_premium',
+            'subscription' => 'required|string',
         ]);
 
-        $role = str_contains($request->subscription, 'instansi') ? 'admin' : 'peserta';
+        $subscription = $request->subscription;
+        $specialTestId = null;
+
+        // CEK APAKAH USER MEMILIH PAKET TES KHUSUS (Contoh input: khusus_1, khusus_2)
+        if (str_starts_with($subscription, 'khusus_')) {
+            $specialTestId = str_replace('khusus_', '', $subscription);
+            $subscription = 'siswa_khusus';
+        }
+
+        $role = str_contains($subscription, 'instansi') ? 'admin' : 'peserta';
 
         User::create([
             'name' => $request->name,
@@ -37,12 +48,18 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
             'raw_password' => $request->password,
             'role' => $role,
-            'subscription' => $request->subscription,
+            'subscription' => $subscription,
+            'special_test_id' => $specialTestId, // 👈 KUNCI KE TERGABUNGNYA TES KHUSUS
             'account_status' => 'pending',
             'instansi_id' => null
         ]);
 
-        $namaPaket = str_replace('_', ' ', strtoupper($request->subscription));
+        $namaPaket = str_replace('_', ' ', strtoupper($subscription));
+        if ($specialTestId) {
+            $st = SpecialTest::find($specialTestId);
+            if ($st) { $namaPaket .= " (" . $st->name . ")"; }
+        }
+
         $textMessage = "Halo Admin Pusat, saya ingin mengonfirmasi pengajuan registrasi akun di learningeveryday.\n\n"
                      . "Nama / Instansi: " . $request->name . "\n"
                      . "Email / Username: " . $request->email . "\n"
@@ -57,13 +74,11 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        // DUKUNG LOGIN DENGAN USERNAME TANPA @ (SENSITIF HURUFU BESAR/KECIL)
         $request->validate([
             'email' => 'required|string',
             'password' => 'required',
         ]);
 
-        // Cek pencocokan username/email secara persis
         $user = User::where('email', $request->email)->first();
 
         if ($user) {
@@ -75,7 +90,6 @@ class AuthController extends Controller
             }
         }
 
-        // Gunakan kredensial pencocokan email/username
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
             $request->session()->regenerate();
 

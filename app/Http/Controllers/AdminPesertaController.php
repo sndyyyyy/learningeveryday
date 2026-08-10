@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\QuizResult;
 use App\Models\Question;
 use App\Models\Quiz;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\PesertaImport;
 
 class AdminPesertaController extends Controller
 {
@@ -128,58 +130,73 @@ class AdminPesertaController extends Controller
         return view('admin.peserta.rekap-detail', compact('result', 'quiz', 'questions'));
     }
 
+    // public function importPeserta(Request $request)
+    // {
+    //     $request->validate([
+    //         'excel_file' => 'required|file|mimes:csv,txt|max:2048'
+    //     ]);
+
+    //     $file = $request->file('excel_file');
+    //     $path = $file->getRealPath();
+
+    //     if (($handle = fopen($path, "r")) !== FALSE) {
+    //         fgetcsv($handle, 1000, ",");
+
+    //         $importedCount = 0;
+    //         $skippedCount = 0;
+
+    //         while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+    //             if (count($data) >= 3) {
+    //                 $name = trim($data[0]);
+    //                 $email = trim($data[1]);
+    //                 $password = trim($data[2]);
+
+    //                 if (!empty($name) && !empty($email) && !empty($password)) {
+    //                     $exists = User::where('email', $email)->exists();
+                        
+    //                     if (!$exists) {
+    //                         User::create([
+    //                             'name' => $name,
+    //                             'email' => $email,
+    //                             'password' => Hash::make($password),
+    //                             'raw_password' => $password,
+    //                             'role' => 'peserta',
+    //                             'account_status' => 'approved',
+    //                             'instansi_id' => null,
+    //                         ]);
+    //                         $importedCount++;
+    //                     } else {
+    //                         $skippedCount++;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         fclose($handle);
+            
+    //         $msg = "Berhasil mengimpor {$importedCount} akun peserta pusat baru!";
+    //         if ($skippedCount > 0) {
+    //             $msg .= " ({$skippedCount} akun dilewati karena username/email sudah terdaftar).";
+    //         }
+
+    //         return redirect()->back()->with('success', $msg);
+    //     }
+
+    //     return redirect()->back()->with('error', 'Gagal membaca file CSV.');
+    // }
+
+
     public function importPeserta(Request $request)
     {
         $request->validate([
-            'excel_file' => 'required|file|mimes:csv,txt|max:2048'
+            'excel_file' => 'required|mimes:xlsx,xls,csv|max:2048'
         ]);
 
-        $file = $request->file('excel_file');
-        $path = $file->getRealPath();
-
-        if (($handle = fopen($path, "r")) !== FALSE) {
-            fgetcsv($handle, 1000, ",");
-
-            $importedCount = 0;
-            $skippedCount = 0;
-
-            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
-                if (count($data) >= 3) {
-                    $name = trim($data[0]);
-                    $email = trim($data[1]);
-                    $password = trim($data[2]);
-
-                    if (!empty($name) && !empty($email) && !empty($password)) {
-                        $exists = User::where('email', $email)->exists();
-                        
-                        if (!$exists) {
-                            User::create([
-                                'name' => $name,
-                                'email' => $email,
-                                'password' => Hash::make($password),
-                                'raw_password' => $password,
-                                'role' => 'peserta',
-                                'account_status' => 'approved',
-                                'instansi_id' => null,
-                            ]);
-                            $importedCount++;
-                        } else {
-                            $skippedCount++;
-                        }
-                    }
-                }
-            }
-            fclose($handle);
-            
-            $msg = "Berhasil mengimpor {$importedCount} akun peserta pusat baru!";
-            if ($skippedCount > 0) {
-                $msg .= " ({$skippedCount} akun dilewati karena username/email sudah terdaftar).";
-            }
-
-            return redirect()->back()->with('success', $msg);
+        try {
+            Excel::import(new PesertaImport, $request->file('excel_file'));
+            return redirect()->back()->with('success', 'Data peserta berhasil diimpor dari file Excel!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal mengimpor file Excel. Pastikan format kolom sesuai.');
         }
-
-        return redirect()->back()->with('error', 'Gagal membaca file CSV.');
     }
 
     public function updateInstansiProfile(Request $request)
