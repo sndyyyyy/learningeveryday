@@ -55,37 +55,54 @@
                         <textarea name="question_text" rows="3" required class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-indigo-500"></textarea>
                     </div>
 
+                    <!-- INPUT GAMBAR SOAL UTAMA -->
                     <div>
-                        <label class="block text-gray-600 text-[11px] font-semibold mb-1">Upload Gambar (Optional)</label>
+                        <label class="block text-gray-600 text-[11px] font-semibold mb-1">Gambar Soal (Optional)</label>
+                        <div class="flex gap-1.5 items-center mb-1.5">
+                            <input type="text" name="selected_image_path" id="in-image-path" readonly placeholder="Atau pilih dari galeri..." class="flex-1 px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-600 focus:outline-none">
+                            <button type="button" onclick="openMediaPickerModal('in-image-path')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1.5 rounded-lg text-xs border border-indigo-200 transition cursor-pointer whitespace-nowrap">
+                                📁 Galeri
+                            </button>
+                        </div>
                         <input type="file" name="image" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
                     </div>
+
+                    <!-- INPUT AUDIO SOAL UTAMA -->
                     <div>
-                        <label class="block text-gray-600 text-[11px] font-semibold mb-1">Upload Audio Listening (Optional)</label>
+                        <label class="block text-gray-600 text-[11px] font-semibold mb-1">Audio Listening (Optional)</label>
+                        <div class="flex gap-1.5 items-center mb-1.5">
+                            <input type="text" name="selected_audio_path" id="in-audio-path" readonly placeholder="Atau pilih dari galeri..." class="flex-1 px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-600 focus:outline-none">
+                            <button type="button" onclick="openMediaPickerModal('in-audio-path')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2.5 py-1.5 rounded-lg text-xs border border-amber-200 transition cursor-pointer whitespace-nowrap">
+                                📁 Galeri
+                            </button>
+                        </div>
                         <input type="file" name="audio" accept="audio/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[11px] file:font-bold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
                     </div>
                     
+                    <!-- OPSI PILIHAN GANDA DENGAN DUKUNGAN GAMBAR (TEKS / UPLOAD / GALERI) -->
                     <div id="container-multiple-choice" class="space-y-3.5 transition-all">
-                        <div class="grid grid-cols-2 gap-2.5">
-                            <div>
-                                <label class="block text-gray-600 text-[10px] font-semibold mb-0.5">Pilihan A</label>
-                                <input type="text" name="option_a" class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-gray-600 text-[10px] font-semibold mb-0.5">Pilihan B</label>
-                                <input type="text" name="option_b" class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-gray-600 text-[10px] font-semibold mb-0.5">Pilihan C</label>
-                                <input type="text" name="option_c" class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
-                            </div>
-                            <div>
-                                <label class="block text-gray-600 text-[10px] font-semibold mb-0.5">Pilihan D</label>
-                                <input type="text" name="option_d" class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
-                            </div>
+                        <div class="grid grid-cols-1 gap-2.5">
+                            @foreach(['a', 'b', 'c', 'd'] as $opt)
+                                <div class="border border-gray-100 p-2.5 rounded-xl bg-gray-50/60">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <label class="block text-gray-700 text-[11px] font-bold uppercase">Pilihan {{ strtoupper($opt) }}</label>
+                                        <button type="button" onclick="openMediaPickerModal('in-opt-{{$opt}}-path')" class="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition cursor-pointer">
+                                            📁 Galeri
+                                        </button>
+                                    </div>
+                                    <input type="text" name="option_{{$opt}}" id="in-opt-{{$opt}}-path" placeholder="Ketik teks opsi atau pilih gambar..." class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none mb-1 font-medium">
+                                    <input type="hidden" name="selected_option_{{$opt}}_path" id="in-opt-{{$opt}}-path-hidden">
+                                    
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-[9px] text-gray-400 font-semibold">Atau upload gambar:</span>
+                                        <input type="file" name="option_{{$opt}}_file" accept="image/*" class="text-[9px] text-gray-500 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:bg-gray-200 file:text-gray-700 hover:file:bg-gray-300">
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
                         <div>
                             <label class="block text-gray-600 text-[11px] font-semibold mb-1">Jawaban Benar (Pilihan Ganda)</label>
-                            <select name="correct_answer_mc" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
+                            <select name="correct_answer_mc" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none font-bold text-indigo-700 bg-white">
                                 <option value="A">A</option>
                                 <option value="B">B</option>
                                 <option value="C">C</option>
@@ -94,10 +111,14 @@
                         </div>
                     </div>
 
-                    <div id="container-essay" class="hidden mt-2 bg-amber-50 p-3 rounded-lg border border-amber-200">
+                    <div id="container-essay" class="hidden mt-2 bg-amber-50 p-3 rounded-lg border border-amber-200 space-y-2">
                         <label class="block text-amber-800 text-[11px] font-bold mb-1">Kunci Jawaban Essay</label>
-                        <p class="text-[10px] text-amber-600 mb-2 leading-relaxed">Masukkan jawaban berurutan sesuai jumlah kata <b>[blank]</b>. Pisahkan dengan koma (,).<br>Contoh: <b>Jakarta, 1945</b></p>
-                        <input type="text" name="correct_answer_essay" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-xs focus:outline-none focus:border-amber-500 bg-white" placeholder="Jawaban 1, Jawaban 2...">
+                        <p class="text-[10px] text-amber-700 leading-normal">
+                            • Pemisah antar-blank gunakan <b>|</b><br>
+                            • Variasi sinonim jawaban gunakan <b>/</b><br>
+                            <i>Contoh: <b>Bandung / Bandoeng | Jawa Barat / Jabar</b></i>
+                        </p>
+                        <input type="text" name="correct_answer_essay" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-xs focus:outline-none focus:border-amber-500 bg-white font-medium" placeholder="Contoh: Bandung / Bandoeng | Jawa Barat / Jabar">
                     </div>
 
                     <div>
@@ -111,65 +132,39 @@
                 </form>
             </div>
 
-{{-- <div id="container-import-excel" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-    <h3 class="text-sm font-bold text-gray-800 mb-1 flex items-center space-x-1">
-        <span>📊</span> <span>Metode 2: Import dari Excel (.CSV)</span>
-    </h3>
-    
-    <!-- PANDUAN PENGISIAN YANG LEBIH JELAS -->
-    <div class="text-[10px] text-gray-500 mb-3 leading-relaxed bg-gray-50 p-2 rounded-md border border-gray-200">
-        <p class="font-bold text-gray-700 mb-1">Format kolom berurutan: <span class="text-indigo-600">Soal, Opsi A, Opsi B, Opsi C, Opsi D, Jawaban Benar, Pembahasan.</span></p>
-        <ul class="list-disc pl-4 text-gray-500 space-y-0.5">
-            <li><b>Pilihan Ganda:</b> Isi lengkap opsi A-D. Kolom Jawaban Benar isi dengan huruf A/B/C/D.</li>
-            <li><b>Essay:</b> Kosongkan kolom Opsi A-D (atau isi tanda strip <code class="bg-gray-200 px-1 rounded">-</code>). Kolom Jawaban Benar isi dengan teks jawaban dipisah koma (contoh: <i>Jakarta, 1945</i>). Sisipkan <b>[blank]</b> pada teks soal.</li>
-        </ul>
-    </div>
-    
-    <form action="{{ route('admin.bank.questions.import', $part->id) }}" method="POST" enctype="multipart/form-data" class="space-y-3">
-        @csrf
-        <div class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center bg-white hover:bg-gray-50 transition cursor-pointer">
-            <input type="file" name="excel_file" required accept=".csv" class="w-full text-xs text-gray-500 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 file:border-0 file:rounded-md file:px-3 file:py-1.5 cursor-pointer">
-        </div>
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-sm">
-            🚀 Jalankan Import File CSV
-        </button>
-    </form>
-</div> --}}
+            <div id="container-import-excel" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-800 mb-1 flex items-center space-x-1">
+                    <span>📊</span> <span>Metode 2: Import dari Excel (.XLSX)</span>
+                </h3>
+                
+                <div class="text-[10px] text-gray-500 mb-3 leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2">
+                    <p class="font-bold text-gray-700">Format Header Excel (Baris 1):</p>
+                    <div class="text-indigo-600 font-mono font-bold bg-indigo-50 px-2 py-1 rounded leading-normal">
+                        Soal | Opsi A | Opsi B | Opsi C | Opsi D | Jawaban Benar | Pembahasan
+                    </div>
+                    <ul class="list-disc pl-4 text-gray-500 space-y-0.5 pt-1">
+                        <li><b>Pilihan Ganda:</b> Isi opsi A-D. Kolom Jawaban Benar diisi huruf <b>A/B/C/D</b>.</li>
+                        <li><b>Essay:</b> Kosongkan Opsi A-D (atau isi tanda strip <code class="bg-gray-200 px-1 rounded">-</code>). Jawaban benar dipisah <b>|</b> untuk antar-blank dan <b>/</b> untuk sinonim. Sisipkan <b>[blank]</b> di pertanyaan.</li>
+                    </ul>
 
-<div id="container-import-excel" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-    <h3 class="text-sm font-bold text-gray-800 mb-1 flex items-center space-x-1">
-        <span>📊</span> <span>Metode 2: Import dari Excel (.XLSX)</span>
-    </h3>
-    
-    <!-- PANDUAN & TOMBOL DOWNLOAD TEMPLATE -->
-    <div class="text-[10px] text-gray-500 mb-3 leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2">
-        <p class="font-bold text-gray-700">Format Header Excel (Baris 1):</p>
-        <div class="text-indigo-600 font-mono font-bold bg-indigo-50 px-2 py-1 rounded leading-normal">
-            Soal | Opsi A | Opsi B | Opsi C | Opsi D | Jawaban Benar | Pembahasan
-        </div>
-        <ul class="list-disc pl-4 text-gray-500 space-y-0.5 pt-1">
-            <li><b>Pilihan Ganda:</b> Isi opsi A-D. Kolom Jawaban Benar diisi huruf <b>A/B/C/D</b>.</li>
-            <li><b>Essay:</b> Kosongkan Opsi A-D (atau isi tanda strip <code class="bg-gray-200 px-1 rounded">-</code>). Kolom Jawaban Benar diisi teks (pisahkan koma jika lebih dari 1 kata). Sisipkan <b>[blank]</b> di pertanyaan.</li>
-        </ul>
-
-        <div class="pt-1">
-            <a href="{{ asset('templates/template_soal.xlsx') }}" download 
-               class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-bold hover:underline">
-                <span>📥 Download Template Soal Excel (.xlsx)</span>
-            </a>
-        </div>
-    </div>
-    
-    <form action="{{ route('admin.bank.questions.import', $part->id) }}" method="POST" enctype="multipart/form-data" class="space-y-3">
-        @csrf
-        <div class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center bg-white hover:bg-gray-50 transition cursor-pointer">
-            <input type="file" name="excel_file" required accept=".xlsx, .xls, .csv" class="w-full text-xs text-gray-500 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 file:border-0 file:rounded-md file:px-3 file:py-1.5 cursor-pointer">
-        </div>
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-sm cursor-pointer">
-            🚀 Import Soal dari Excel
-        </button>
-    </form>
-</div>
+                    <div class="pt-1">
+                        <a href="{{ asset('templates/template_soal.xlsx') }}" download 
+                           class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-bold hover:underline">
+                            <span>📥 Download Template Soal Excel (.xlsx)</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <form action="{{ route('admin.bank.questions.import', $part->id) }}" method="POST" enctype="multipart/form-data" class="space-y-3">
+                    @csrf
+                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center bg-white hover:bg-gray-50 transition cursor-pointer">
+                        <input type="file" name="excel_file" required accept=".xlsx, .xls, .csv" class="w-full text-xs text-gray-500 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 file:border-0 file:rounded-md file:px-3 file:py-1.5 cursor-pointer">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-sm cursor-pointer">
+                        🚀 Import Soal dari Excel
+                    </button>
+                </form>
+            </div>
         </div>
 
         <div class="md:col-span-2 bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 h-fit">
@@ -192,11 +187,22 @@
                             
                             <div class="flex flex-row gap-1.5 shrink-0 items-center">
                                 @php
-                                    // Ekstrak string jawaban essay jika berupa JSON array
                                     $essayAnswerString = '';
-                                    if($q->type === 'essay' && $q->correct_answer) {
+                                    if ($q->type === 'essay' && $q->correct_answer) {
                                         $decoded = json_decode($q->correct_answer, true);
-                                        $essayAnswerString = is_array($decoded) ? implode(', ', $decoded) : $q->correct_answer;
+                                        if (is_array($decoded)) {
+                                            $blankParts = [];
+                                            foreach ($decoded as $bIdx => $aliases) {
+                                                if (is_array($aliases)) {
+                                                    $blankParts[] = "Blank " . ($bIdx + 1) . ": " . implode(' / ', array_map('ucwords', $aliases));
+                                                } else {
+                                                    $blankParts[] = $aliases;
+                                                }
+                                            }
+                                            $essayAnswerString = implode(' | ', $blankParts);
+                                        } else {
+                                            $essayAnswerString = $q->correct_answer;
+                                        }
                                     }
                                 @endphp
 
@@ -246,11 +252,23 @@
                                 </p>
                             </div>
                         @else
+                            <!-- SMART DETECT OPSI TEKS VS GAMBAR DI TAMPILAN ADMIN -->
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2.5 pl-4 text-xs text-gray-600">
-                                <p class="p-2 rounded-md {{ $q->correct_answer == 'A' ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'bg-gray-50' }}">A. {{ $q->options['A'] ?? '' }}</p>
-                                <p class="p-2 rounded-md {{ $q->correct_answer == 'B' ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'bg-gray-50' }}">B. {{ $q->options['B'] ?? '' }}</p>
-                                <p class="p-2 rounded-md {{ $q->correct_answer == 'C' ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'bg-gray-50' }}">C. {{ $q->options['C'] ?? '' }}</p>
-                                <p class="p-2 rounded-md {{ $q->correct_answer == 'D' ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-100' : 'bg-gray-50' }}">D. {{ $q->options['D'] ?? '' }}</p>
+                                @foreach(['A', 'B', 'C', 'D'] as $optKey)
+                                    @php
+                                        $optVal = $q->options[$optKey] ?? '';
+                                        $isOptImage = preg_match('/\.(jpeg|jpg|gif|png|webp)$/i', $optVal) || str_starts_with($optVal, 'options/') || str_starts_with($optVal, 'media/');
+                                        $isCorrect = ($q->correct_answer == $optKey);
+                                    @endphp
+                                    <div class="p-2 rounded-md {{ $isCorrect ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200' : 'bg-gray-50' }}">
+                                        <strong>{{ $optKey }}.</strong> 
+                                        @if($isOptImage)
+                                            <img src="/storage/{{ $optVal }}" class="max-h-16 object-contain inline-block ml-1 rounded border border-gray-200 bg-white p-0.5" />
+                                        @else
+                                            {{ $optVal }}
+                                        @endif
+                                    </div>
+                                @endforeach
                             </div>
                         @endif
                         
@@ -268,6 +286,7 @@
 
     </div>
 
+    <!-- MODAL POPUP EDIT SOAL BANK -->
     <div id="edit-modal" class="fixed inset-0 bg-black/60 hidden justify-center items-center z-50 backdrop-blur-sm transition-all duration-300">
         <div class="bg-white p-6 rounded-2xl max-w-lg w-[90%] shadow-2xl overflow-y-auto max-h-[90vh] animate-fade-in">
             <div class="flex justify-between items-center border-b border-gray-100 pb-3 mb-4">
@@ -295,6 +314,12 @@
                 
                 <div class="border border-gray-100 p-3 rounded-xl bg-gray-50/50">
                     <label class="block text-gray-600 text-[11px] font-semibold mb-1">Ganti Gambar (Optional)</label>
+                    <div class="flex gap-1.5 items-center mb-1.5">
+                        <input type="text" name="selected_image_path" id="edit-image-path" readonly placeholder="Atau pilih dari galeri..." class="flex-1 px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-600 focus:outline-none">
+                        <button type="button" onclick="openMediaPickerModal('edit-image-path')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1.5 rounded-lg text-xs border border-indigo-200 transition cursor-pointer whitespace-nowrap">
+                            📁 Galeri
+                        </button>
+                    </div>
                     <input type="file" name="image" accept="image/*" class="w-full text-xs text-gray-500 mb-2">
                     <div id="edit_image_delete_container" class="hidden flex-row items-center space-x-2 mt-1">
                         <input type="checkbox" name="delete_image" id="delete_image_checkbox" value="1" class="w-3.5 h-3.5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
@@ -304,6 +329,12 @@
 
                 <div class="border border-gray-100 p-3 rounded-xl bg-gray-50/50">
                     <label class="block text-gray-600 text-[11px] font-semibold mb-1">Ganti Audio Listening (Optional)</label>
+                    <div class="flex gap-1.5 items-center mb-1.5">
+                        <input type="text" name="selected_audio_path" id="edit-audio-path" readonly placeholder="Atau pilih dari galeri..." class="flex-1 px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white text-gray-600 focus:outline-none">
+                        <button type="button" onclick="openMediaPickerModal('edit-audio-path')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2.5 py-1.5 rounded-lg text-xs border border-amber-200 transition cursor-pointer whitespace-nowrap">
+                            📁 Galeri
+                        </button>
+                    </div>
                     <input type="file" name="audio" accept="audio/*" class="w-full text-xs text-gray-500 mb-2">
                     <div id="edit_audio_delete_container" class="hidden flex-row items-center space-x-2 mt-1">
                         <input type="checkbox" name="delete_audio" id="delete_audio_checkbox" value="1" class="w-3.5 h-3.5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
@@ -312,27 +343,27 @@
                 </div>
                 
                 <div id="edit_container_multiple_choice" class="space-y-4">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-gray-600 text-[11px] font-semibold mb-1">Pilihan A</label>
-                            <input type="text" name="option_a" id="edit_option_a" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-gray-600 text-[11px] font-semibold mb-1">Pilihan B</label>
-                            <input type="text" name="option_b" id="edit_option_b" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-gray-600 text-[11px] font-semibold mb-1">Pilihan C</label>
-                            <input type="text" name="option_c" id="edit_option_c" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-gray-600 text-[11px] font-semibold mb-1">Pilihan D</label>
-                            <input type="text" name="option_d" id="edit_option_d" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
-                        </div>
+                    <div class="grid grid-cols-1 gap-2.5">
+                        @foreach(['a', 'b', 'c', 'd'] as $opt)
+                            <div class="border border-gray-100 p-2.5 rounded-xl bg-gray-50/60">
+                                <div class="flex justify-between items-center mb-1">
+                                    <label class="block text-gray-700 text-[11px] font-bold uppercase">Pilihan {{ strtoupper($opt) }}</label>
+                                    <button type="button" onclick="openMediaPickerModal('edit_option_{{$opt}}')" class="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 hover:bg-indigo-100 transition cursor-pointer">
+                                        📁 Galeri
+                                    </button>
+                                </div>
+                                <input type="text" name="option_{{$opt}}" id="edit_option_{{$opt}}" placeholder="Ketik teks opsi atau pilih gambar..." class="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none mb-1 font-medium">
+                                
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[9px] text-gray-400 font-semibold">Ganti gambar:</span>
+                                    <input type="file" name="option_{{$opt}}_file" accept="image/*" class="text-[9px] text-gray-500 file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-[9px] file:font-bold file:bg-gray-200 file:text-gray-700 hover:file:bg-gray-300">
+                                </div>
+                            </div>
+                        @endforeach
                     </div>
                     <div>
                         <label class="block text-gray-600 text-[11px] font-semibold mb-1">Jawaban Benar</label>
-                        <select name="correct_answer_mc" id="edit_correct_answer_mc" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none">
+                        <select name="correct_answer_mc" id="edit_correct_answer_mc" class="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none font-bold text-indigo-700 bg-white">
                             <option value="A">A</option>
                             <option value="B">B</option>
                             <option value="C">C</option>
@@ -341,10 +372,14 @@
                     </div>
                 </div>
 
-                <div id="edit_container_essay" class="hidden bg-amber-50 p-3 rounded-lg border border-amber-200">
+                <div id="edit_container_essay" class="hidden bg-amber-50 p-3 rounded-lg border border-amber-200 space-y-2">
                     <label class="block text-amber-800 text-[11px] font-bold mb-1">Kunci Jawaban Essay</label>
-                    <p class="text-[10px] text-amber-600 mb-2 leading-relaxed">Pisahkan jawaban dengan koma (,). Contoh: <b>Jakarta, 1945</b></p>
-                    <input type="text" name="correct_answer_essay" id="edit_correct_answer_essay" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-xs focus:outline-none focus:border-amber-500 bg-white">
+                    <p class="text-[10px] text-amber-700 leading-normal">
+                        • Pemisah antar-blank gunakan <b>|</b><br>
+                        • Variasi sinonim jawaban gunakan <b>/</b><br>
+                        <i>Contoh: <b>Bandung / Bandoeng | Jawa Barat / Jabar</b></i>
+                    </p>
+                    <input type="text" name="correct_answer_essay" id="edit_correct_answer_essay" class="w-full px-3 py-2 border border-amber-300 rounded-lg text-xs focus:outline-none focus:border-amber-500 bg-white font-medium">
                 </div>
 
                 <div>
@@ -360,8 +395,10 @@
         </div>
     </div>
 
+    <!-- KOMPONEN MODAL POP-UP GALERI MEDIA INTERNAL -->
+    @include('components.media-picker-modal')
+
     <script>
-        // Logika Form Kiri (Input Baru)
         function toggleQuestionType() {
             const type = document.getElementById("in-type").value;
             const containerMC = document.getElementById("container-multiple-choice");
@@ -379,7 +416,6 @@
             }
         }
 
-        // Logika Form Kanan (Modal Edit)
         function toggleEditQuestionType() {
             const type = document.getElementById("edit_type").value;
             const containerMC = document.getElementById("edit_container_multiple_choice");
@@ -416,7 +452,6 @@
             
             form.action = `/admin/bank/questions/${id}`;
             
-            // Populate Data
             document.getElementById('edit_type').value = type;
             document.getElementById('edit_question_text').value = text;
             document.getElementById('edit_option_a').value = optA;
@@ -427,10 +462,8 @@
             document.getElementById('edit_correct_answer_essay').value = correctEssay;
             document.getElementById('edit_explanation').value = explanation || '';
 
-            // Panggil fungsi toggle agar form yang muncul sesuai dengan tipe soal
             toggleEditQuestionType();
 
-            // Kontrol Media Delete Checkbox
             const imgDeleteBox = document.getElementById('edit_image_delete_container');
             const audioDeleteBox = document.getElementById('edit_audio_delete_container');
             

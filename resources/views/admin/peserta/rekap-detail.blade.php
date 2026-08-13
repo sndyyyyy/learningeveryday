@@ -13,7 +13,7 @@
     <div class="bg-white border-t border-gray-100 py-4 px-4 md:px-8 shadow-xs sticky top-16 z-30">
         <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <a href="{{ route('admin.dashboard') }}" class="text-xs text-gray-500 hover:text-indigo-600 font-semibold transition">&larr; Kembali ke Dashboard</a>
+                <a href="{{ route('admin.dashboard.utama') }}" class="text-xs text-gray-500 hover:text-indigo-600 font-semibold transition">&larr; Kembali ke Dashboard</a>
                 <h2 class="text-base md:text-lg font-bold text-gray-800 mt-1">Lembar Jawaban: {{ $result->user->name }}</h2>
                 <p class="text-xs text-gray-400">Mata Uji kuis: <span class="text-indigo-600 font-medium">{{ $quiz->title }}</span></p>
             </div>

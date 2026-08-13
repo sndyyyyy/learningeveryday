@@ -12,15 +12,12 @@ use App\Imports\BankQuestionImport;
 
 class QuestionBankController extends Controller
 {
-    // Halaman list Bank Soal Utama
     public function index()
     {
-        // Mengambil seluruh bank soal beserta jumlah part di dalamnya
         $banks = QuestionBank::withCount('parts')->latest()->get();
         return view('admin.bank.index', compact('banks'));
     }
 
-    // Menyimpan Label Bank Soal Baru (Misal: Reading Test)
     public function storeBank(Request $request)
     {
         $request->validate(['name' => 'required|string|max:255']);
@@ -30,33 +27,23 @@ class QuestionBankController extends Controller
 
     public function updateBank(Request $request, QuestionBank $bank)
     {
-        $request->validate([
-            'name' => 'required|string|max:255'
-        ]);
-
-        $bank->update([
-            'name' => $request->name
-        ]);
-
+        $request->validate(['name' => 'required|string|max:255']);
+        $bank->update(['name' => $request->name]);
         return redirect()->back()->with('success', 'Nama Kategori Bank Soal berhasil diperbarui!');
     }
 
-    // Menghapus Bank Soal permanen beserta isinya (cascade)
     public function destroyBank(QuestionBank $bank)
     {
         $bank->delete();
         return redirect()->back()->with('success', 'Bank Soal berhasil dihapus!');
     }
 
-    // Halaman Detail Part di dalam salah satu Bank Soal
     public function showParts(QuestionBank $bank)
     {
-        // Mengambil part yang terikat ke Bank Soal ini beserta kalkulasi jumlah soalnya
         $parts = BankPart::where('question_bank_id', $bank->id)->withCount('questions')->get();
         return view('admin.bank.parts', compact('bank', 'parts'));
     }
 
-    // Membuat Part baru di dalam Bank Soal (Misal: Part 1, Part 2)
     public function storePart(Request $request, QuestionBank $bank)
     {
         $request->validate(['part_name' => 'required|string|max:255']);
@@ -71,18 +58,11 @@ class QuestionBankController extends Controller
 
     public function updatePart(Request $request, BankPart $part)
     {
-        $request->validate([
-            'part_name' => 'required|string|max:255'
-        ]);
-
-        $part->update([
-            'part_name' => $request->part_name
-        ]);
-
+        $request->validate(['part_name' => 'required|string|max:255']);
+        $part->update(['part_name' => $request->part_name]);
         return redirect()->back()->with('success', 'Nama Part Bank Soal berhasil diperbarui!');
     }
 
-    // Menghapus Part
     public function destroyPart(BankPart $part)
     {
         $part->delete();
@@ -91,61 +71,59 @@ class QuestionBankController extends Controller
 
     public function showBankQuestions(BankPart $part)
     {
-        // Mengambil data wadah bank soal utamanya untuk info di breadcrumb UI
         $bank = $part->questionBank;
-        
-        // Mengambil seluruh soal yang terikat ke part ini
         $questions = BankQuestion::where('bank_part_id', $part->id)->latest()->get();
 
         return view('admin.bank.questions', compact('bank', 'part', 'questions'));
     }
 
-    // 2. Menyimpan Soal ke Bank Soal secara Manual 1-per-1
     public function storeBankQuestion(Request $request, BankPart $part)
     {
-        // Validasi dibikin dinamis tergantung tipe soal
         $request->validate([
             'type' => 'required|in:multiple_choice,essay',
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
+            'selected_image_path' => 'nullable|string',
+            'selected_audio_path' => 'nullable|string',
             'explanation' => 'nullable|string',
-            
-            // Pilihan ganda hanya wajib kalau tipenya multiple_choice
-            'option_a' => 'required_if:type,multiple_choice',
-            'option_b' => 'required_if:type,multiple_choice',
-            'option_c' => 'required_if:type,multiple_choice',
-            'option_d' => 'required_if:type,multiple_choice',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
-            
-            // Kunci jawaban essay hanya wajib kalau tipenya essay
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
+            'option_a_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_b_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_c_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_d_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $imagePath = $request->hasFile('image') ? $request->file('image')->store('bank/images', 'public') : null;
-        $audioPath = $request->hasFile('audio') ? $request->file('audio')->store('bank/audios', 'public') : null;
+        // Prioritas 1: File Upload Manual Baru. Fallback: Path dari Galeri
+        $imagePath = $request->hasFile('image') 
+            ? $request->file('image')->store('bank/images', 'public') 
+            : $request->input('selected_image_path');
 
-        // Persiapan variabel data
+        $audioPath = $request->hasFile('audio') 
+            ? $request->file('audio')->store('bank/audios', 'public') 
+            : $request->input('selected_audio_path');
+
         $options = [];
         $correctAnswer = null;
 
         if ($request->type === 'multiple_choice') {
-            $options = [
-                'A' => $request->option_a,
-                'B' => $request->option_b,
-                'C' => $request->option_c,
-                'D' => $request->option_d,
-            ];
+            foreach (['a', 'b', 'c', 'd'] as $opt) {
+                $upper = strtoupper($opt);
+                if ($request->hasFile("option_{$opt}_file")) {
+                    $options[$upper] = $request->file("option_{$opt}_file")->store('options/images', 'public');
+                } elseif ($request->filled("selected_option_{$opt}_path")) {
+                    $options[$upper] = $request->input("selected_option_{$opt}_path");
+                } else {
+                    $options[$upper] = $request->input("option_{$opt}");
+                }
+            }
             $correctAnswer = $request->correct_answer_mc;
         } else {
-            // Mode Essay Multi-Blank & Multi-Alias:
-            // 1. Pecah berdasarkan pemisah antar-blank ('|' atau ';')
             $rawBlanks = array_map('trim', preg_split('/[|;]/', $request->correct_answer_essay));
-            
             $parsedAnswers = [];
             foreach ($rawBlanks as $blank) {
                 if (!empty($blank)) {
-                    // 2. Pecah variasi alias dalam 1 blank berdasarkan ('/' atau ',')
                     $aliases = array_map(function($item) {
                         return mb_strtolower(trim($item));
                     }, preg_split('/[\/,]/', $blank));
@@ -172,22 +150,16 @@ class QuestionBankController extends Controller
 
     public function importExcelPlaceholder(Request $request, BankPart $part)
     {
-        $request->validate([
-            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:2048'
-        ]);
+        $request->validate(['excel_file' => 'required|file|mimes:xlsx,xls,csv|max:2048']);
 
         try {
             Excel::import(new BankQuestionImport($part->id), $request->file('excel_file'));
-
             return redirect()->back()->with('success', 'Berhasil mengimpor koleksi soal secara massal dari file Excel!');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal mengimpor file Excel. Pastikan struktur kolom sesuai dengan template.');
         }
     }
 
-    // ===================================================
-    // FUNGSI UPDATE DATA SOAL DI BANK SOAL
-    // ===================================================
     public function updateBankQuestion(Request $request, BankQuestion $question)
     {
         $request->validate([
@@ -195,41 +167,55 @@ class QuestionBankController extends Controller
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
+            'selected_image_path' => 'nullable|string',
+            'selected_audio_path' => 'nullable|string',
             'explanation' => 'nullable|string',
-            'option_a' => 'required_if:type,multiple_choice',
-            'option_b' => 'required_if:type,multiple_choice',
-            'option_c' => 'required_if:type,multiple_choice',
-            'option_d' => 'required_if:type,multiple_choice',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
+            'option_a_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_b_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_c_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_d_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // Manajemen File Gambar
+        // Update Gambar Utama
         if ($request->hasFile('image')) {
-            if ($question->image) {
+            if ($question->image && Storage::disk('public')->exists($question->image)) {
                 Storage::disk('public')->delete($question->image);
             }
             $question->image = $request->file('image')->store('bank/images', 'public');
+        } elseif ($request->filled('selected_image_path')) {
+            $question->image = $request->input('selected_image_path');
         }
 
-        // Manajemen File Audio
+        // Update Audio Utama
         if ($request->hasFile('audio')) {
-            if ($question->audio) {
+            if ($question->audio && Storage::disk('public')->exists($question->audio)) {
                 Storage::disk('public')->delete($question->audio);
             }
             $question->audio = $request->file('audio')->store('bank/audios', 'public');
+        } elseif ($request->filled('selected_audio_path')) {
+            $question->audio = $request->input('selected_audio_path');
         }
 
         $options = [];
         $correctAnswer = null;
 
         if ($request->type === 'multiple_choice') {
-            $options = [
-                'A' => $request->option_a,
-                'B' => $request->option_b,
-                'C' => $request->option_c,
-                'D' => $request->option_d,
-            ];
+            $existingOptions = $question->options ?? [];
+
+            foreach (['a', 'b', 'c', 'd'] as $opt) {
+                $upper = strtoupper($opt);
+                if ($request->hasFile("option_{$opt}_file")) {
+                    $options[$upper] = $request->file("option_{$opt}_file")->store('options/images', 'public');
+                } elseif ($request->filled("selected_option_{$opt}_path")) {
+                    $options[$upper] = $request->input("selected_option_{$opt}_path");
+                } elseif ($request->filled("option_{$opt}")) {
+                    $options[$upper] = $request->input("option_{$opt}");
+                } else {
+                    $options[$upper] = $existingOptions[$upper] ?? '';
+                }
+            }
             $correctAnswer = $request->correct_answer_mc;
         } else {
             $rawBlanks = array_map('trim', preg_split('/[|;]/', $request->correct_answer_essay));
@@ -258,16 +244,13 @@ class QuestionBankController extends Controller
         return redirect()->back()->with('success', 'Soal di Bank Soal berhasil diperbarui!');
     }
 
-    // ===================================================
-    // FUNGSI HAPUS SOAL PERMANEN DARI BANK SOAL
-    // ===================================================
     public function destroyBankQuestion(BankQuestion $question)
     {
-        if ($question->image) {
+        if ($question->image && Storage::disk('public')->exists($question->image)) {
             Storage::disk('public')->delete($question->image);
         }
 
-        if ($question->audio) {
+        if ($question->audio && Storage::disk('public')->exists($question->audio)) {
             Storage::disk('public')->delete($question->audio);
         }
 

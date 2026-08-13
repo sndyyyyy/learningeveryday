@@ -80,6 +80,11 @@
                    class="{{ Request::routeIs('admin.approval.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
                     Persetujuan Akun
                 </a>
+                <a href="{{ route('admin.media.index') }}" 
+                   class="{{ Request::routeIs('admin.media.*') ? 'text-indigo-600 font-bold border-b-2 border-indigo-600 pb-1' : 'text-gray-500 hover:text-indigo-600 font-medium' }} text-sm transition tracking-wide">
+                    Galeri Media
+                </a>
+
             @endif
 
             @if(auth()->user()->role === 'admin')

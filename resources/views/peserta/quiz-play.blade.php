@@ -205,6 +205,29 @@
           }
       }
 
+      // 🧠 FUNSI PEMBANTU UTAMA: Cek Apakah Opsi Berupa Gambar
+      function isOptionImage(val) {
+          if (!val) return false;
+          return val.match(/\.(jpeg|jpg|gif|png|webp)$/i) || 
+                 val.startsWith('options/') || 
+                 val.startsWith('media/') || 
+                 val.startsWith('questions/') ||
+                 val.startsWith('bank/');
+      }
+
+      // 🎨 RENDER ISI TOMBOL OPSI (TEKS / GAMBAR)
+      function getOptionContentHtml(key, val, textClass = "text-indigo-600") {
+          if (isOptionImage(val)) {
+              return `
+                  <span class="flex items-center gap-2">
+                      <strong class="${textClass} shrink-0">${key}.</strong>
+                      <img src="/storage/${val}" class="max-h-24 md:max-h-28 object-contain rounded-lg border border-gray-200 p-1 bg-white" />
+                  </span>
+              `;
+          }
+          return `<strong class="${textClass} mr-1">${key}.</strong> ${val}`;
+      }
+
       function loadQuestion() {
         isAnswering = false;
         const q = quizData[currentQuestionIndex];
@@ -271,8 +294,9 @@
             questionTextContainer.innerText = q.question_text;
             Object.keys(q.options).forEach((key) => {
               const btn = document.createElement("button");
-              btn.className = "option-btn w-full text-left bg-white text-gray-700 border-2 border-gray-200 p-3.5 rounded-xl mb-2.5 font-medium transition-all duration-200 hover:border-indigo-600 hover:bg-indigo-50 cursor-pointer text-sm md:text-base";
-              btn.innerHTML = `<strong class="text-indigo-600 mr-1">${key}.</strong> ${q.options[key]}`;
+              btn.className = "option-btn w-full text-left bg-white text-gray-700 border-2 border-gray-200 p-3 rounded-xl mb-2.5 font-medium transition-all duration-200 hover:border-indigo-600 hover:bg-indigo-50 cursor-pointer text-sm md:text-base flex items-center justify-between";
+              
+              btn.innerHTML = getOptionContentHtml(key, q.options[key]);
               btn.onclick = () => selectAnswer(key, btn);
               optionsContainer.appendChild(btn);
             });
@@ -294,13 +318,13 @@
           btnElement.classList.replace("bg-white", "bg-emerald-500");
           btnElement.classList.replace("text-gray-700", "text-white");
           btnElement.classList.replace("border-gray-200", "border-emerald-500");
-          btnElement.innerHTML = `<strong class="text-white mr-1">${selectedKey}.</strong> ${q.options[selectedKey]}`;
+          btnElement.innerHTML = getOptionContentHtml(selectedKey, q.options[selectedKey], "text-white");
           playCorrectSound();
         } else {
           btnElement.classList.replace("bg-white", "bg-red-500");
           btnElement.classList.replace("text-gray-700", "text-white");
           btnElement.classList.replace("border-gray-200", "border-red-500");
-          btnElement.innerHTML = `<strong class="text-white mr-1">${selectedKey}.</strong> ${q.options[selectedKey]}`;
+          btnElement.innerHTML = getOptionContentHtml(selectedKey, q.options[selectedKey], "text-white");
           playWrongSound();
           
           Object.keys(q.options).forEach((key, index) => {
@@ -308,7 +332,7 @@
                  buttons[index].classList.replace("bg-white", "bg-emerald-500");
                  buttons[index].classList.replace("text-gray-700", "text-white");
                  buttons[index].classList.replace("border-gray-200", "border-emerald-500");
-                 buttons[index].innerHTML = `<strong class="text-white mr-1">${key}.</strong> ${q.options[key]}`;
+                 buttons[index].innerHTML = getOptionContentHtml(key, q.options[key], "text-white");
              }
           });
         }
@@ -340,7 +364,6 @@
 
               let validAliases = correctAnswersGroup[index] || [];
 
-              // Cek apakah jawaban peserta cocok dengan salah satu alias yang sah
               let isMatch = Array.isArray(validAliases) && validAliases.includes(uAns);
 
               if (isMatch) {
@@ -585,6 +608,7 @@
                   Object.keys(q.options).forEach((key) => {
                       let badgeText = '';
                       let textStyle = 'text-gray-500';
+                      let optVal = q.options[key] || '';
                       
                       if (key === q.correct_answer) {
                           badgeText = ' <span class="text-emerald-600 font-bold text-[10px]">[Kunci]</span>';
@@ -594,7 +618,11 @@
                           textStyle = 'text-red-600 line-through';
                       }
 
-                      optionsHtml += `<p class="pl-2 py-0.5 ${textStyle}"><strong>${key}.</strong> ${q.options[key]} ${badgeText}</p>`;
+                      let displayVal = isOptionImage(optVal)
+                          ? `<img src="/storage/${optVal}" class="max-h-12 inline-block rounded border p-0.5" />`
+                          : optVal;
+
+                      optionsHtml += `<div class="pl-2 py-0.5 flex items-center ${textStyle}"><strong>${key}.</strong> &nbsp;${displayVal} ${badgeText}</div>`;
                   });
                   optionsHtml = `<div class="space-y-0.5 bg-white p-2 rounded-lg border border-gray-100/70 text-[11px]">${optionsHtml}</div>`;
               }

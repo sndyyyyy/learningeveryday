@@ -12,7 +12,7 @@ use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SubUserController;
 use App\Http\Controllers\ClassGroupController;
 use App\Http\Controllers\SpecialTestController;
-
+use App\Http\Controllers\MediaManagerController;
 
 // Route::get('/', function () {
 //     return redirect('/login');
@@ -55,6 +55,13 @@ Route::middleware(['auth', 'role:super_admin,admin'])->group(function () {
     Route::post('/admin/quiz/{quiz}/pull-from-bank', [AdminQuizController::class, 'pullFromBankSoal'])->name('admin.quiz.pull_bank');
     Route::get('/admin/quiz/{quiz}/export-word', [AdminQuizController::class, 'exportQuizWord'])->name('admin.quiz.export_word');
 
+Route::get('/admin/media-gallery', [MediaManagerController::class, 'index'])->name('admin.media.index');
+    Route::get('/media-manager/data', [MediaManagerController::class, 'getMedia'])->name('media.data');
+    Route::post('/media-manager/folder', [MediaManagerController::class, 'storeFolder'])->name('media.folder.store');
+    Route::put('/media-manager/folder/{folder}', [MediaManagerController::class, 'updateFolder'])->name('media.folder.update');
+    Route::delete('/media-manager/folder/{folder}', [MediaManagerController::class, 'destroyFolder'])->name('media.folder.destroy');
+    Route::post('/media-manager/upload', [MediaManagerController::class, 'uploadFile'])->name('media.upload');
+    Route::delete('/media-manager/file/{file}', [MediaManagerController::class, 'destroyFile'])->name('media.file.destroy');
 
     // Pengelolaan Gudang Data Bank Soal
     Route::get('/admin/bank-soal', [QuestionBankController::class, 'index'])->name('admin.bank.index');

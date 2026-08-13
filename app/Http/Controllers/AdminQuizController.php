@@ -19,11 +19,10 @@ class AdminQuizController extends Controller
 
         if ($user->role === 'super_admin') {
             $quizzes = Quiz::latest()->get();
-            $classGroups = collect(); // Super Admin tidak perlu
+            $classGroups = collect(); 
             $specialTests = \App\Models\SpecialTest::oldest('name')->get();
         } else {
             $quizzes = Quiz::where('created_by', $user->id)->latest()->get();
-            // Tarik Master Kelas milik instansi ini
             $classGroups = \App\Models\ClassGroup::where('instansi_id', $user->id)->oldest('name')->get();
             $specialTests = collect();
         }
@@ -31,7 +30,6 @@ class AdminQuizController extends Controller
         return view('admin.quiz.index', compact('quizzes', 'classGroups', 'specialTests'));
     }
 
-    // Menyimpan Kuis Baru dengan Label Akses Tier
     public function storeQuiz(Request $request)
     {
         $user = auth()->user();
@@ -56,7 +54,6 @@ class AdminQuizController extends Controller
         return redirect()->back()->with('success', 'Kuis baru berhasil dibuat!');
     }
 
-    // Update di Fungsi updateQuiz
     public function updateQuiz(Request $request, Quiz $quiz)
     {
         $user = auth()->user();
@@ -138,39 +135,49 @@ class AdminQuizController extends Controller
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
+            'selected_image_path' => 'nullable|string',
+            'selected_audio_path' => 'nullable|string',
             'explanation' => 'nullable|string',
             'explanation_link' => 'nullable|url',
             'is_show_explanation' => 'required|boolean',
-            'option_a' => 'required_if:type,multiple_choice',
-            'option_b' => 'required_if:type,multiple_choice',
-            'option_c' => 'required_if:type,multiple_choice',
-            'option_d' => 'required_if:type,multiple_choice',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
+            'option_a_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_b_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_c_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_d_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $imagePath = $request->hasFile('image') ? $request->file('image')->store('questions/images', 'public') : null;
-        $audioPath = $request->hasFile('audio') ? $request->file('audio')->store('questions/audios', 'public') : null;
+        // Prioritas 1: File Upload Manual Baru. Fallback: Path dari Galeri
+        $imagePath = $request->hasFile('image') 
+            ? $request->file('image')->store('questions/images', 'public') 
+            : $request->input('selected_image_path');
+
+        $audioPath = $request->hasFile('audio') 
+            ? $request->file('audio')->store('questions/audios', 'public') 
+            : $request->input('selected_audio_path');
 
         $options = [];
         $correctAnswer = null;
 
         if ($request->type === 'multiple_choice') {
-            $options = [
-                'A' => $request->option_a,
-                'B' => $request->option_b,
-                'C' => $request->option_c,
-                'D' => $request->option_d,
-            ];
+            // Logika Opsi A, B, C, D (Gambar File / Path Galeri / Teks)
+            foreach (['a', 'b', 'c', 'd'] as $opt) {
+                $upper = strtoupper($opt);
+                if ($request->hasFile("option_{$opt}_file")) {
+                    $options[$upper] = $request->file("option_{$opt}_file")->store('options/images', 'public');
+                } elseif ($request->filled("selected_option_{$opt}_path")) {
+                    $options[$upper] = $request->input("selected_option_{$opt}_path");
+                } else {
+                    $options[$upper] = $request->input("option_{$opt}");
+                }
+            }
             $correctAnswer = $request->correct_answer_mc;
         } else {
-            // 1. Pecah jawaban berdasarkan pemisah antar-blank ('|' atau ';')
             $rawBlanks = array_map('trim', preg_split('/[|;]/', $request->correct_answer_essay));
-            
             $parsedAnswers = [];
             foreach ($rawBlanks as $blank) {
                 if (!empty($blank)) {
-                    // 2. Pecah variasi alias dalam 1 blank berdasarkan ('/' atau ',')
                     $aliases = array_map(function($item) {
                         return mb_strtolower(trim($item));
                     }, preg_split('/[\/,]/', $blank));
@@ -204,56 +211,72 @@ class AdminQuizController extends Controller
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
+            'selected_image_path' => 'nullable|string',
+            'selected_audio_path' => 'nullable|string',
             'explanation' => 'nullable|string',
             'explanation_link' => 'nullable|url',
             'is_show_explanation' => 'required|boolean',
-            'option_a' => 'required_if:type,multiple_choice',
-            'option_b' => 'required_if:type,multiple_choice',
-            'option_c' => 'required_if:type,multiple_choice',
-            'option_d' => 'required_if:type,multiple_choice',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
+            'option_a_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_b_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_c_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'option_d_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         if ($request->has('delete_image') && !$request->hasFile('image')) {
-            if ($question->image) {
+            if ($question->image && Storage::disk('public')->exists($question->image)) {
                 Storage::disk('public')->delete($question->image);
-                $question->image = null;
             }
+            $question->image = null;
         }
         if ($request->has('delete_audio') && !$request->hasFile('audio')) {
-            if ($question->audio) {
+            if ($question->audio && Storage::disk('public')->exists($question->audio)) {
                 Storage::disk('public')->delete($question->audio);
-                $question->audio = null;
             }
+            $question->audio = null;
         }
 
+        // Update Gambar Utama
         if ($request->hasFile('image')) {
-            if ($question->image) {
+            if ($question->image && Storage::disk('public')->exists($question->image)) {
                 Storage::disk('public')->delete($question->image);
             }
             $question->image = $request->file('image')->store('questions/images', 'public');
+        } elseif ($request->filled('selected_image_path')) {
+            $question->image = $request->input('selected_image_path');
         }
+
+        // Update Audio Utama
         if ($request->hasFile('audio')) {
-            if ($question->audio) {
+            if ($question->audio && Storage::disk('public')->exists($question->audio)) {
                 Storage::disk('public')->delete($question->audio);
             }
             $question->audio = $request->file('audio')->store('questions/audios', 'public');
+        } elseif ($request->filled('selected_audio_path')) {
+            $question->audio = $request->input('selected_audio_path');
         }
 
         $options = [];
         $correctAnswer = null;
 
         if ($request->type === 'multiple_choice') {
-            $options = [
-                'A' => $request->option_a,
-                'B' => $request->option_b,
-                'C' => $request->option_c,
-                'D' => $request->option_d,
-            ];
+            $existingOptions = $question->options ?? [];
+            
+            foreach (['a', 'b', 'c', 'd'] as $opt) {
+                $upper = strtoupper($opt);
+                if ($request->hasFile("option_{$opt}_file")) {
+                    $options[$upper] = $request->file("option_{$opt}_file")->store('options/images', 'public');
+                } elseif ($request->filled("selected_option_{$opt}_path")) {
+                    $options[$upper] = $request->input("selected_option_{$opt}_path");
+                } elseif ($request->filled("option_{$opt}")) {
+                    $options[$upper] = $request->input("option_{$opt}");
+                } else {
+                    $options[$upper] = $existingOptions[$upper] ?? '';
+                }
+            }
             $correctAnswer = $request->correct_answer_mc;
         } else {
-            // Logika Multi-Blank & Multi-Alias
             $rawBlanks = array_map('trim', preg_split('/[|;]/', $request->correct_answer_essay));
             $parsedAnswers = [];
             foreach ($rawBlanks as $blank) {
@@ -282,10 +305,10 @@ class AdminQuizController extends Controller
 
     public function destroyQuestion(Question $question)
     {
-        if ($question->image) {
+        if ($question->image && Storage::disk('public')->exists($question->image)) {
             Storage::disk('public')->delete($question->image);
         }
-        if ($question->audio) {
+        if ($question->audio && Storage::disk('public')->exists($question->audio)) {
             Storage::disk('public')->delete($question->audio);
         }
 
@@ -300,25 +323,18 @@ class AdminQuizController extends Controller
         return redirect()->back()->with('success', 'Kuis beserta seluruh soal di dalamnya berhasil dihapus!');
     }
 
-    // TOGGLE PEMBAHASAN GLOBAL/MASSAL DARI KUIS
     public function toggleAllExplanations(Request $request, Quiz $quiz)
     {
-        $request->validate([
-            'status' => 'required|boolean'
-        ]);
+        $request->validate(['status' => 'required|boolean']);
 
         $status = $request->status;
-
-        Question::where('quiz_id', $quiz->id)->update([
-            'is_show_explanation' => $status
-        ]);
+        Question::where('quiz_id', $quiz->id)->update(['is_show_explanation' => $status]);
 
         $pesan = $status ? 'Seluruh pembahasan soal berhasil DITAMPILKAN!' : 'Seluruh pembahasan soal berhasil DISEMBUNYIKAN!';
 
         return redirect()->back()->with('success', $pesan);
     }
 
-    // 📊 Mengambil data laporan pengerjaan kuis dalam bentuk JSON untuk Modal
     public function getQuizReportData(Quiz $quiz)
     {
         $user = auth()->user();
@@ -348,7 +364,6 @@ class AdminQuizController extends Controller
         ]);
     }
 
-    // 🖨️ Halaman Cetak Lembar Soal Hardfile (Print / Save as PDF)
     public function exportQuizPdf(Quiz $quiz)
     {
         $user = auth()->user();
@@ -359,20 +374,12 @@ class AdminQuizController extends Controller
 
         $instansi = \App\Models\User::find($quiz->created_by);
 
-        $mcQuestions = \App\Models\Question::where('quiz_id', $quiz->id)
-            ->where('type', 'multiple_choice')
-            ->oldest()
-            ->get();
-
-        $essayQuestions = \App\Models\Question::where('quiz_id', $quiz->id)
-            ->where('type', 'essay')
-            ->oldest()
-            ->get();
+        $mcQuestions = \App\Models\Question::where('quiz_id', $quiz->id)->where('type', 'multiple_choice')->oldest()->get();
+        $essayQuestions = \App\Models\Question::where('quiz_id', $quiz->id)->where('type', 'essay')->oldest()->get();
 
         return view('admin.quiz.print-pdf', compact('quiz', 'mcQuestions', 'essayQuestions', 'instansi'));
     } 
 
-    // 📄 Halaman Export Lembar Soal ke File Microsoft Word (.docx)
     public function exportQuizWord(Quiz $quiz)
     {
         $user = auth()->user();
@@ -383,15 +390,8 @@ class AdminQuizController extends Controller
 
         $instansi = \App\Models\User::find($quiz->created_by);
 
-        $mcQuestions = \App\Models\Question::where('quiz_id', $quiz->id)
-            ->where('type', 'multiple_choice')
-            ->oldest()
-            ->get();
-
-        $essayQuestions = \App\Models\Question::where('quiz_id', $quiz->id)
-            ->where('type', 'essay')
-            ->oldest()
-            ->get();
+        $mcQuestions = \App\Models\Question::where('quiz_id', $quiz->id)->where('type', 'multiple_choice')->oldest()->get();
+        $essayQuestions = \App\Models\Question::where('quiz_id', $quiz->id)->where('type', 'essay')->oldest()->get();
 
         $filename = 'Naskah_Soal_' . \Illuminate\Support\Str::slug($quiz->title) . '.doc';
 
