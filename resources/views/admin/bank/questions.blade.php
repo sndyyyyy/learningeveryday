@@ -33,6 +33,7 @@
                 <div class="bg-amber-100 text-amber-700 p-3 rounded-xl text-xs font-bold shadow-xs">{{ session('error') }}</div>
             @endif
 
+            <!-- METODE 1: INPUT MANUAL SOAL -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center space-x-1">
                     <span>✏️</span> <span>Metode 1: Input Manual Soal</span>
@@ -132,6 +133,7 @@
                 </form>
             </div>
 
+            <!-- METODE 2: IMPORT DARI EXCEL STANDARD (.XLSX) -->
             <div id="container-import-excel" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <h3 class="text-sm font-bold text-gray-800 mb-1 flex items-center space-x-1">
                     <span>📊</span> <span>Metode 2: Import dari Excel (.XLSX)</span>
@@ -165,6 +167,46 @@
                     </button>
                 </form>
             </div>
+
+            <!-- METODE 3: IMPORT PAKET SOAL (.ZIP) BESERTA FOLDER MEDIA -->
+            <div id="container-import-zip" class="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-sm font-bold text-gray-800 mb-1 flex items-center space-x-1">
+                    <span>📦</span> <span>Metode 3: Import Paket Soal (.ZIP)</span>
+                </h3>
+                
+                <div class="text-[10px] text-gray-500 mb-3 leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-200 space-y-2">
+                    <p class="font-bold text-gray-700">Struktur File .ZIP yang Diunggah:</p>
+                    <div class="text-indigo-700 font-mono text-[10px] bg-indigo-50 p-2 rounded border border-indigo-100 leading-normal">
+                        📁 Paket_Soal.zip<br>
+                        ├── 📄 soal.xlsx (File Excel Utama)<br>
+                        └── 📁 media/ (Folder tempat menaruh foto & sound)<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;├── gambar1.png<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;└── sound1.mp3
+                    </div>
+                    <p class="text-gray-600">
+                        • Di dalam Excel, sebutkan nama file media di kolom Soal/Opsi. Contoh: <code class="bg-gray-200 px-1 rounded">gambar1.png</code><br>
+                        • Sistem akan otomatis memindahkan media ke Galeri & menghubungkannya ke soal!
+                    </p>
+
+                    <div class="pt-1">
+                        <a href="{{ asset('templates/template_paket_soal_zip.zip') }}" download 
+                           class="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-bold hover:underline">
+                            <span>📥 Download Contoh Contoh Paket ZIP (.zip)</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <form action="{{ route('admin.bank.questions.import_zip', $part->id) }}" method="POST" enctype="multipart/form-data" class="space-y-3">
+                    @csrf
+                    <div class="border-2 border-dashed border-gray-200 rounded-xl p-3 text-center bg-white hover:bg-gray-50 transition cursor-pointer">
+                        <input type="file" name="zip_file" required accept=".zip" class="w-full text-xs text-gray-500 file:text-[11px] file:font-bold file:bg-indigo-50 file:text-indigo-700 file:border-0 file:rounded-md file:px-3 file:py-1.5 cursor-pointer">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5">
+                        <span>🚀 Ekstrak & Import Paket ZIP</span>
+                    </button>
+                </form>
+            </div>
+
         </div>
 
         <div class="md:col-span-2 bg-white p-5 md:p-6 rounded-xl shadow-sm border border-gray-100 h-fit">

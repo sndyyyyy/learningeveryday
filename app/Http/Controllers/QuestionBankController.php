@@ -9,6 +9,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\BankQuestionImport;
+use App\Models\MediaFile;
+use App\Models\MediaFolder;
+use Illuminate\Support\Facades\File;
+use ZipArchive;
+
 
 class QuestionBankController extends Controller
 {
@@ -246,16 +251,233 @@ class QuestionBankController extends Controller
 
     public function destroyBankQuestion(BankQuestion $question)
     {
-        if ($question->image && Storage::disk('public')->exists($question->image)) {
-            Storage::disk('public')->delete($question->image);
-        }
+        // if ($question->image && Storage::disk('public')->exists($question->image)) {
+        //     Storage::disk('public')->delete($question->image);
+        // }
 
-        if ($question->audio && Storage::disk('public')->exists($question->audio)) {
-            Storage::disk('public')->delete($question->audio);
-        }
+        // if ($question->audio && Storage::disk('public')->exists($question->audio)) {
+        //     Storage::disk('public')->delete($question->audio);
+        // }
 
         $question->delete();
 
         return redirect()->back()->with('success', 'Soal berhasil dihapus dari Bank Soal!');
     }
+
+
+// ===================================================
+// FUNGSI IMPORT PAKET ZIP (EXCEL + FOLDER MEDIA)
+// ===================================================
+public function importZipPackage(Request $request, BankPart $part)
+{
+    $request->validate([
+        'zip_file' => 'required|file|mimes:zip|max:51200', // Max 50MB
+    ]);
+
+    $zipFile = $request->file('zip_file');
+    $zip = new ZipArchive();
+
+    if ($zip->open($zipFile->getRealPath()) !== true) {
+        return redirect()->back()->with('error', 'Gagal membuka file ZIP. Pastikan format file adalah .zip standar.');
+    }
+
+    // 1. Buat folder ekstrak sementara di storage
+    $tempDirName = 'temp_zip_' . time() . '_' . auth()->id();
+    $tempPath = storage_path('app/' . $tempDirName);
+    File::makeDirectory($tempPath, 0755, true);
+
+    // Ekstrak seluruh isi ZIP
+    $zip->extractTo($tempPath);
+    $zip->close();
+
+    // 2. Cari File Excel (.xlsx / .csv)
+    $excelFiles = File::glob($tempPath . '/*.{xlsx,xls,csv}', GLOB_BRACE);
+    if (empty($excelFiles)) {
+        $excelFiles = File::glob($tempPath . '/*/*.{xlsx,xls,csv}', GLOB_BRACE);
+    }
+
+    if (empty($excelFiles)) {
+        File::deleteDirectory($tempPath);
+        return redirect()->back()->with('error', 'File Excel (.xlsx) tidak ditemukan di dalam paket ZIP!');
+    }
+
+    $excelFilePath = $excelFiles[0];
+
+    // 3. Cari Folder 'media'
+    $mediaDirs = File::glob($tempPath . '/media', GLOB_ONLYDIR);
+    if (empty($mediaDirs)) {
+        $mediaDirs = File::glob($tempPath . '/*/media', GLOB_ONLYDIR);
+    }
+
+    $mediaMap = []; 
+    $folderMap = []; // Peta penampung ID folder galeri: [nama_subfolder => id_media_folder]
+
+    if (!empty($mediaDirs)) {
+        $mediaPath = $mediaDirs[0];
+        $allMediaFiles = File::allFiles($mediaPath);
+
+        // A. Buat Folder Utama untuk Paket ZIP ini di Galeri (agar tidak berantakan di root)
+        $bankName = $part->questionBank ? $part->questionBank->name : 'Bank Soal';
+
+        // 🌟 Format nama folder: [Nama Bank] - [Nama Part] (opsional: tambah timestamp)
+        $folderName = $bankName . ' - ' . $part->part_name . ' (' . date('d M Y, H:i') . ')';
+
+        // A. Buat Folder Utama untuk Paket ZIP ini di Galeri
+        $mainGalleryFolder = MediaFolder::create([
+            'user_id'   => auth()->id(),
+            'parent_id' => null, // Masuk ke Root Galeri
+            'name'      => $folderName
+        ]);
+
+        foreach ($allMediaFiles as $mFile) {
+            $fileName = $mFile->getFilename();
+            $ext = strtolower($mFile->getExtension());
+
+            // Deteksi jenis file (Audio vs Gambar)
+            $isAudio = in_array($ext, ['mp3', 'wav', 'ogg', 'm4a', 'opus', 'aac']);
+            $type = $isAudio ? 'audio' : 'image';
+            $targetFolder = $isAudio ? 'audios' : 'images';
+
+            // 🌟 DETEKSI APAKAH FILE BERADA DI DALAM SUB-FOLDER (misal: media/khususgambar/gambar.jpeg)
+            $relativePath = $mFile->getRelativePath(); // Mengambil struktur folder relatif di dalam 'media/'
+            $targetFolderId = $mainGalleryFolder->id;
+
+            if (!empty($relativePath)) {
+                $subFolderName = trim($relativePath, '/\\');
+                
+                // Jika sub-folder galeri ini belum pernah dibuat, buatkan baru!
+                if (!isset($folderMap[$subFolderName])) {
+                    $newSubFolder = MediaFolder::create([
+                        'user_id' => auth()->id(),
+                        'parent_id' => $mainGalleryFolder->id,
+                        'name' => $subFolderName
+                    ]);
+                    $folderMap[$subFolderName] = $newSubFolder->id;
+                }
+                
+                $targetFolderId = $folderMap[$subFolderName];
+            }
+
+            // Pindahkan berkas dari temp ke Storage Public
+            $storagePath = "media/{$targetFolder}/" . time() . '_' . $fileName;
+            Storage::disk('public')->put($storagePath, File::get($mFile->getRealPath()));
+
+            // Simpan record ke Galeri Media Internal dengan ID FOLDER YANG SESUAI
+            MediaFile::create([
+                'user_id'   => auth()->id(),
+                'folder_id' => $targetFolderId, // 👈 Masuk ke Sub-folder Galeri yang sesuai struktur ZIP
+                'file_name' => $fileName,
+                'file_path' => $storagePath,
+                'file_type' => $type,
+                'file_size' => $mFile->getSize(),
+            ]);
+
+            // Catat ke pemetaan nama file
+            $mediaMap[strtolower($fileName)] = $storagePath;
+        }
+    }
+
+    // 4. Proses Pembacaan Data Excel
+    try {
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($excelFilePath);
+        $worksheet   = $spreadsheet->getActiveSheet();
+        $rows        = $worksheet->toArray();
+
+        $countSuccess = 0;
+
+        // Loop data baris kuis (mulai baris ke-2 / Index 1)
+        for ($i = 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+
+            $rawSoal     = trim($row[0] ?? '');
+            $rawOptA     = trim($row[1] ?? '');
+            $rawOptB     = trim($row[2] ?? '');
+            $rawOptC     = trim($row[3] ?? '');
+            $rawOptD     = trim($row[4] ?? '');
+            $rawAnswer   = trim($row[5] ?? '');
+            $explanation = trim($row[6] ?? '');
+
+            if (empty($rawSoal) || empty($rawAnswer)) {
+                continue;
+            }
+
+            // A. Deteksi Gambar & Audio pada Teks Soal
+            $questionImage = null;
+            $questionAudio = null;
+
+            foreach ($mediaMap as $origFileName => $storagePath) {
+                if (str_contains(strtolower($rawSoal), $origFileName)) {
+                    if (str_contains($storagePath, '/audios/')) {
+                        $questionAudio = $storagePath;
+                    } else {
+                        $questionImage = $storagePath;
+                    }
+
+                    $rawSoal = str_ireplace(
+                        [$origFileName, '[image:'.$origFileName.']', '[audio:'.$origFileName.']'],
+                        '',
+                        $rawSoal
+                    );
+                }
+            }
+
+            // B. Deteksi Opsi A, B, C, D (Gambar vs Teks / Essay)
+            $options = [];
+            $isEssay = empty($rawOptA) || $rawOptA === '-';
+
+            if ($isEssay) {
+                $type = 'essay';
+                $rawBlanks = array_map('trim', preg_split('/[|;]/', $rawAnswer));
+                $parsedAnswers = [];
+                foreach ($rawBlanks as $blank) {
+                    if (!empty($blank)) {
+                        $aliases = array_map(function($item) {
+                            return mb_strtolower(trim($item));
+                        }, preg_split('/[\/,]/', $blank));
+                        $parsedAnswers[] = array_values(array_filter($aliases));
+                    }
+                }
+                $correctAnswer = json_encode($parsedAnswers);
+            } else {
+                $type = 'multiple_choice';
+
+                $rawOptions = ['A' => $rawOptA, 'B' => $rawOptB, 'C' => $rawOptC, 'D' => $rawOptD];
+
+                foreach ($rawOptions as $key => $val) {
+                    $valLower = strtolower($val);
+                    if (isset($mediaMap[$valLower])) {
+                        $options[$key] = $mediaMap[$valLower];
+                    } else {
+                        $options[$key] = $val;
+                    }
+                }
+
+                $correctAnswer = strtoupper($rawAnswer);
+            }
+
+            // C. Simpan ke Database Soal
+            BankQuestion::create([
+                'bank_part_id'  => $part->id,
+                'type'          => $type,
+                'question_text' => trim($rawSoal),
+                'image'         => $questionImage,
+                'audio'         => $questionAudio,
+                'options'       => $options,
+                'correct_answer'=> $correctAnswer,
+                'explanation'   => !empty($explanation) ? $explanation : null,
+            ]);
+
+            $countSuccess++;
+        }
+
+        // Hapus folder temporary
+        File::deleteDirectory($tempPath);
+
+        return redirect()->back()->with('success', "Berhasil mengimpor paket ZIP! {$countSuccess} soal & seluruh folder media otomatis dibuatkan di Galeri.");
+
+    } catch (\Exception $e) {
+        File::deleteDirectory($tempPath);
+        return redirect()->back()->with('error', 'Gagal memproses file Excel ZIP: ' . $e->getMessage());
+    }
+}
 }

@@ -77,6 +77,7 @@ Route::get('/admin/media-gallery', [MediaManagerController::class, 'index'])->na
     Route::put('/admin/bank/questions/{question}', [QuestionBankController::class, 'updateBankQuestion'])->name('admin.bank.questions.update');
     Route::delete('/admin/bank/questions/{question}', [QuestionBankController::class, 'destroyBankQuestion'])->name('admin.bank.questions.destroy');
     Route::post('/admin/bank-soal/parts/{part}/import', [QuestionBankController::class, 'importExcelPlaceholder'])->name('admin.bank.questions.import');
+Route::post('/admin/bank/part/{part}/import-zip', [QuestionBankController::class, 'importZipPackage'])->name('admin.bank.questions.import_zip');
 });
 
 // =========================================================================

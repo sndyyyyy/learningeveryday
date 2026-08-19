@@ -132,11 +132,14 @@ class MediaManagerController extends Controller
             return response()->json(['error' => 'Akses ditolak.'], 403);
         }
 
+        // Hapus file fisik dari public storage
         if (Storage::disk('public')->exists($file->file_path)) {
             Storage::disk('public')->delete($file->file_path);
         }
 
+        // Hapus record dari database galeri
         $file->delete();
+
         return response()->json(['success' => true]);
     }
 }

@@ -305,12 +305,12 @@ class AdminQuizController extends Controller
 
     public function destroyQuestion(Question $question)
     {
-        if ($question->image && Storage::disk('public')->exists($question->image)) {
-            Storage::disk('public')->delete($question->image);
-        }
-        if ($question->audio && Storage::disk('public')->exists($question->audio)) {
-            Storage::disk('public')->delete($question->audio);
-        }
+        // if ($question->image && Storage::disk('public')->exists($question->image)) {
+        //     Storage::disk('public')->delete($question->image);
+        // }
+        // if ($question->audio && Storage::disk('public')->exists($question->audio)) {
+        //     Storage::disk('public')->delete($question->audio);
+        // }
 
         $question->delete();
 
