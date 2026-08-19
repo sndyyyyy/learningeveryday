@@ -118,7 +118,7 @@ class AdminQuizController extends Controller
                     'options' => $bq->options,
                     'correct_answer' => $bq->correct_answer,
                     'explanation' => $bq->explanation,
-                    'explanation_link' => $bq->explanation_link,
+                    'explanation_link' => $bq->explanation_link ?? null,
                     'is_show_explanation' => $bq->is_show_explanation ?? true
                 ]);
                 $copiedCount++;
@@ -131,7 +131,7 @@ class AdminQuizController extends Controller
     public function storeQuestion(Request $request, Quiz $quiz)
     {
         $request->validate([
-            'type' => 'required|in:multiple_choice,essay',
+            'type' => 'required|in:multiple_choice,essay,sorting,grouping,labeling',
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
@@ -142,13 +142,15 @@ class AdminQuizController extends Controller
             'is_show_explanation' => 'required|boolean',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
+            'correct_answer_sorting' => 'required_if:type,sorting|string|nullable',
+            'correct_answer_grouping' => 'required_if:type,grouping|string|nullable',
+            'correct_answer_labeling' => 'required_if:type,labeling|string|nullable',
             'option_a_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_b_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_c_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_d_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // Prioritas 1: File Upload Manual Baru. Fallback: Path dari Galeri
         $imagePath = $request->hasFile('image') 
             ? $request->file('image')->store('questions/images', 'public') 
             : $request->input('selected_image_path');
@@ -161,7 +163,6 @@ class AdminQuizController extends Controller
         $correctAnswer = null;
 
         if ($request->type === 'multiple_choice') {
-            // Logika Opsi A, B, C, D (Gambar File / Path Galeri / Teks)
             foreach (['a', 'b', 'c', 'd'] as $opt) {
                 $upper = strtoupper($opt);
                 if ($request->hasFile("option_{$opt}_file")) {
@@ -173,7 +174,7 @@ class AdminQuizController extends Controller
                 }
             }
             $correctAnswer = $request->correct_answer_mc;
-        } else {
+        } elseif ($request->type === 'essay') {
             $rawBlanks = array_map('trim', preg_split('/[|;]/', $request->correct_answer_essay));
             $parsedAnswers = [];
             foreach ($rawBlanks as $blank) {
@@ -181,11 +182,56 @@ class AdminQuizController extends Controller
                     $aliases = array_map(function($item) {
                         return mb_strtolower(trim($item));
                     }, preg_split('/[\/,]/', $blank));
-                    
                     $parsedAnswers[] = array_values(array_filter($aliases));
                 }
             }
             $correctAnswer = json_encode($parsedAnswers);
+        } elseif ($request->type === 'sorting') {
+            $cleanSentence = trim(preg_replace('/\s+/', ' ', $request->correct_answer_sorting));
+            $correctAnswer = $cleanSentence;
+            $words = explode(' ', $cleanSentence);
+            $shuffledWords = $words;
+            shuffle($shuffledWords);
+            $options = $shuffledWords;
+        } elseif ($request->type === 'grouping') {
+            $rawGroups = array_map('trim', explode('|', $request->correct_answer_grouping));
+            $parsedGroupAnswers = [];
+            $allWords = [];
+            $categories = [];
+
+            foreach ($rawGroups as $groupStr) {
+                if (str_contains($groupStr, ':')) {
+                    [$catName, $wordsStr] = array_map('trim', explode(':', $groupStr, 2));
+                    $words = array_values(array_filter(array_map('trim', explode(',', $wordsStr))));
+                    $parsedGroupAnswers[$catName] = $words;
+                    $categories[] = $catName;
+                    $allWords = array_merge($allWords, $words);
+                }
+            }
+
+            shuffle($allWords);
+            $options = ['categories' => $categories, 'words' => $allWords];
+            $correctAnswer = json_encode($parsedGroupAnswers);
+        } elseif ($request->type === 'labeling') {
+            $rawLabels = array_map('trim', explode('|', $request->correct_answer_labeling));
+            $parsedLabels = [];
+            $labelList = [];
+
+            foreach ($rawLabels as $lblStr) {
+                if (str_contains($lblStr, ':')) {
+                    [$name, $coordStr] = array_map('trim', explode(':', $lblStr, 2));
+                    $coords = array_map('floatval', array_map('trim', explode(',', $coordStr)));
+                    $parsedLabels[$name] = [
+                        'x' => $coords[0] ?? 50,
+                        'y' => $coords[1] ?? 50
+                    ];
+                    $labelList[] = $name;
+                }
+            }
+
+            shuffle($labelList);
+            $options = $labelList;
+            $correctAnswer = json_encode($parsedLabels);
         }
 
         Question::create([
@@ -207,7 +253,7 @@ class AdminQuizController extends Controller
     public function updateQuestion(Request $request, Question $question)
     {
         $request->validate([
-            'type' => 'required|in:multiple_choice,essay',
+            'type' => 'required|in:multiple_choice,essay,sorting,grouping,labeling',
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
@@ -218,6 +264,9 @@ class AdminQuizController extends Controller
             'is_show_explanation' => 'required|boolean',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
+            'correct_answer_sorting' => 'required_if:type,sorting|string|nullable',
+            'correct_answer_grouping' => 'required_if:type,grouping|string|nullable',
+            'correct_answer_labeling' => 'required_if:type,labeling|string|nullable',
             'option_a_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_b_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_c_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -225,33 +274,16 @@ class AdminQuizController extends Controller
         ]);
 
         if ($request->has('delete_image') && !$request->hasFile('image')) {
-            if ($question->image && Storage::disk('public')->exists($question->image)) {
-                Storage::disk('public')->delete($question->image);
-            }
             $question->image = null;
-        }
-        if ($request->has('delete_audio') && !$request->hasFile('audio')) {
-            if ($question->audio && Storage::disk('public')->exists($question->audio)) {
-                Storage::disk('public')->delete($question->audio);
-            }
-            $question->audio = null;
-        }
-
-        // Update Gambar Utama
-        if ($request->hasFile('image')) {
-            if ($question->image && Storage::disk('public')->exists($question->image)) {
-                Storage::disk('public')->delete($question->image);
-            }
+        } elseif ($request->hasFile('image')) {
             $question->image = $request->file('image')->store('questions/images', 'public');
         } elseif ($request->filled('selected_image_path')) {
             $question->image = $request->input('selected_image_path');
         }
 
-        // Update Audio Utama
-        if ($request->hasFile('audio')) {
-            if ($question->audio && Storage::disk('public')->exists($question->audio)) {
-                Storage::disk('public')->delete($question->audio);
-            }
+        if ($request->has('delete_audio') && !$request->hasFile('audio')) {
+            $question->audio = null;
+        } elseif ($request->hasFile('audio')) {
             $question->audio = $request->file('audio')->store('questions/audios', 'public');
         } elseif ($request->filled('selected_audio_path')) {
             $question->audio = $request->input('selected_audio_path');
@@ -262,7 +294,6 @@ class AdminQuizController extends Controller
 
         if ($request->type === 'multiple_choice') {
             $existingOptions = $question->options ?? [];
-            
             foreach (['a', 'b', 'c', 'd'] as $opt) {
                 $upper = strtoupper($opt);
                 if ($request->hasFile("option_{$opt}_file")) {
@@ -276,7 +307,7 @@ class AdminQuizController extends Controller
                 }
             }
             $correctAnswer = $request->correct_answer_mc;
-        } else {
+        } elseif ($request->type === 'essay') {
             $rawBlanks = array_map('trim', preg_split('/[|;]/', $request->correct_answer_essay));
             $parsedAnswers = [];
             foreach ($rawBlanks as $blank) {
@@ -288,6 +319,52 @@ class AdminQuizController extends Controller
                 }
             }
             $correctAnswer = json_encode($parsedAnswers);
+        } elseif ($request->type === 'sorting') {
+            $cleanSentence = trim(preg_replace('/\s+/', ' ', $request->correct_answer_sorting));
+            $correctAnswer = $cleanSentence;
+            $words = explode(' ', $cleanSentence);
+            $shuffledWords = $words;
+            shuffle($shuffledWords);
+            $options = $shuffledWords;
+        } elseif ($request->type === 'grouping') {
+            $rawGroups = array_map('trim', explode('|', $request->correct_answer_grouping));
+            $parsedGroupAnswers = [];
+            $allWords = [];
+            $categories = [];
+
+            foreach ($rawGroups as $groupStr) {
+                if (str_contains($groupStr, ':')) {
+                    [$catName, $wordsStr] = array_map('trim', explode(':', $groupStr, 2));
+                    $words = array_values(array_filter(array_map('trim', explode(',', $wordsStr))));
+                    $parsedGroupAnswers[$catName] = $words;
+                    $categories[] = $catName;
+                    $allWords = array_merge($allWords, $words);
+                }
+            }
+
+            shuffle($allWords);
+            $options = ['categories' => $categories, 'words' => $allWords];
+            $correctAnswer = json_encode($parsedGroupAnswers);
+        } elseif ($request->type === 'labeling') {
+            $rawLabels = array_map('trim', explode('|', $request->correct_answer_labeling));
+            $parsedLabels = [];
+            $labelList = [];
+
+            foreach ($rawLabels as $lblStr) {
+                if (str_contains($lblStr, ':')) {
+                    [$name, $coordStr] = array_map('trim', explode(':', $lblStr, 2));
+                    $coords = array_map('floatval', array_map('trim', explode(',', $coordStr)));
+                    $parsedLabels[$name] = [
+                        'x' => $coords[0] ?? 50,
+                        'y' => $coords[1] ?? 50
+                    ];
+                    $labelList[] = $name;
+                }
+            }
+
+            shuffle($labelList);
+            $options = $labelList;
+            $correctAnswer = json_encode($parsedLabels);
         }
 
         $question->type = $request->type;
@@ -305,15 +382,7 @@ class AdminQuizController extends Controller
 
     public function destroyQuestion(Question $question)
     {
-        // if ($question->image && Storage::disk('public')->exists($question->image)) {
-        //     Storage::disk('public')->delete($question->image);
-        // }
-        // if ($question->audio && Storage::disk('public')->exists($question->audio)) {
-        //     Storage::disk('public')->delete($question->audio);
-        // }
-
         $question->delete();
-
         return redirect()->back()->with('success', 'Soal berhasil dihapus dari kuis!');
     }
 

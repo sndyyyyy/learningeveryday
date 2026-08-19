@@ -14,7 +14,6 @@ use App\Models\MediaFolder;
 use Illuminate\Support\Facades\File;
 use ZipArchive;
 
-
 class QuestionBankController extends Controller
 {
     public function index()
@@ -85,7 +84,7 @@ class QuestionBankController extends Controller
     public function storeBankQuestion(Request $request, BankPart $part)
     {
         $request->validate([
-            'type' => 'required|in:multiple_choice,essay',
+            'type' => 'required|in:multiple_choice,essay,sorting,grouping,labeling',
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
@@ -94,13 +93,15 @@ class QuestionBankController extends Controller
             'explanation' => 'nullable|string',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
+            'correct_answer_sorting' => 'required_if:type,sorting|string|nullable',
+            'correct_answer_grouping' => 'required_if:type,grouping|string|nullable',
+            'correct_answer_labeling' => 'required_if:type,labeling|string|nullable',
             'option_a_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_b_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_c_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_d_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // Prioritas 1: File Upload Manual Baru. Fallback: Path dari Galeri
         $imagePath = $request->hasFile('image') 
             ? $request->file('image')->store('bank/images', 'public') 
             : $request->input('selected_image_path');
@@ -124,7 +125,7 @@ class QuestionBankController extends Controller
                 }
             }
             $correctAnswer = $request->correct_answer_mc;
-        } else {
+        } elseif ($request->type === 'essay') {
             $rawBlanks = array_map('trim', preg_split('/[|;]/', $request->correct_answer_essay));
             $parsedAnswers = [];
             foreach ($rawBlanks as $blank) {
@@ -132,11 +133,57 @@ class QuestionBankController extends Controller
                     $aliases = array_map(function($item) {
                         return mb_strtolower(trim($item));
                     }, preg_split('/[\/,]/', $blank));
-                    
                     $parsedAnswers[] = array_values(array_filter($aliases));
                 }
             }
             $correctAnswer = json_encode($parsedAnswers);
+        } elseif ($request->type === 'sorting') {
+            $cleanSentence = trim(preg_replace('/\s+/', ' ', $request->correct_answer_sorting));
+            $correctAnswer = $cleanSentence;
+            $words = explode(' ', $cleanSentence);
+            $shuffledWords = $words;
+            shuffle($shuffledWords);
+            $options = $shuffledWords;
+        } elseif ($request->type === 'grouping') {
+            $rawGroups = array_map('trim', explode('|', $request->correct_answer_grouping));
+            $parsedGroupAnswers = [];
+            $allWords = [];
+            $categories = [];
+
+            foreach ($rawGroups as $groupStr) {
+                if (str_contains($groupStr, ':')) {
+                    [$catName, $wordsStr] = array_map('trim', explode(':', $groupStr, 2));
+                    $words = array_values(array_filter(array_map('trim', explode(',', $wordsStr))));
+                    $parsedGroupAnswers[$catName] = $words;
+                    $categories[] = $catName;
+                    $allWords = array_merge($allWords, $words);
+                }
+            }
+
+            shuffle($allWords);
+            $options = ['categories' => $categories, 'words' => $allWords];
+            $correctAnswer = json_encode($parsedGroupAnswers);
+        } elseif ($request->type === 'labeling') {
+            // Format: "rotor blade: 50, 30 | cockpit: 60, 48 | landing pad: 50, 75"
+            $rawLabels = array_map('trim', explode('|', $request->correct_answer_labeling));
+            $parsedLabels = [];
+            $labelList = [];
+
+            foreach ($rawLabels as $lblStr) {
+                if (str_contains($lblStr, ':')) {
+                    [$name, $coordStr] = array_map('trim', explode(':', $lblStr, 2));
+                    $coords = array_map('floatval', array_map('trim', explode(',', $coordStr)));
+                    $parsedLabels[$name] = [
+                        'x' => $coords[0] ?? 50,
+                        'y' => $coords[1] ?? 50
+                    ];
+                    $labelList[] = $name;
+                }
+            }
+
+            shuffle($labelList);
+            $options = $labelList;
+            $correctAnswer = json_encode($parsedLabels);
         }
 
         BankQuestion::create([
@@ -153,22 +200,10 @@ class QuestionBankController extends Controller
         return redirect()->back()->with('success', 'Soal baru berhasil ditambahkan ke Bank Soal!');
     }
 
-    public function importExcelPlaceholder(Request $request, BankPart $part)
-    {
-        $request->validate(['excel_file' => 'required|file|mimes:xlsx,xls,csv|max:2048']);
-
-        try {
-            Excel::import(new BankQuestionImport($part->id), $request->file('excel_file'));
-            return redirect()->back()->with('success', 'Berhasil mengimpor koleksi soal secara massal dari file Excel!');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal mengimpor file Excel. Pastikan struktur kolom sesuai dengan template.');
-        }
-    }
-
     public function updateBankQuestion(Request $request, BankQuestion $question)
     {
         $request->validate([
-            'type' => 'required|in:multiple_choice,essay',
+            'type' => 'required|in:multiple_choice,essay,sorting,grouping,labeling',
             'question_text' => 'required|string',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'audio' => 'nullable|extensions:mp3,wav,ogg,aac,m4a,opus|max:10240',
@@ -177,27 +212,26 @@ class QuestionBankController extends Controller
             'explanation' => 'nullable|string',
             'correct_answer_mc' => 'required_if:type,multiple_choice|in:A,B,C,D|nullable',
             'correct_answer_essay' => 'required_if:type,essay|string|nullable',
+            'correct_answer_sorting' => 'required_if:type,sorting|string|nullable',
+            'correct_answer_grouping' => 'required_if:type,grouping|string|nullable',
+            'correct_answer_labeling' => 'required_if:type,labeling|string|nullable',
             'option_a_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_b_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_c_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'option_d_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // Update Gambar Utama
-        if ($request->hasFile('image')) {
-            if ($question->image && Storage::disk('public')->exists($question->image)) {
-                Storage::disk('public')->delete($question->image);
-            }
+        if ($request->has('delete_image') && !$request->hasFile('image')) {
+            $question->image = null;
+        } elseif ($request->hasFile('image')) {
             $question->image = $request->file('image')->store('bank/images', 'public');
         } elseif ($request->filled('selected_image_path')) {
             $question->image = $request->input('selected_image_path');
         }
 
-        // Update Audio Utama
-        if ($request->hasFile('audio')) {
-            if ($question->audio && Storage::disk('public')->exists($question->audio)) {
-                Storage::disk('public')->delete($question->audio);
-            }
+        if ($request->has('delete_audio') && !$request->hasFile('audio')) {
+            $question->audio = null;
+        } elseif ($request->hasFile('audio')) {
             $question->audio = $request->file('audio')->store('bank/audios', 'public');
         } elseif ($request->filled('selected_audio_path')) {
             $question->audio = $request->input('selected_audio_path');
@@ -208,7 +242,6 @@ class QuestionBankController extends Controller
 
         if ($request->type === 'multiple_choice') {
             $existingOptions = $question->options ?? [];
-
             foreach (['a', 'b', 'c', 'd'] as $opt) {
                 $upper = strtoupper($opt);
                 if ($request->hasFile("option_{$opt}_file")) {
@@ -222,7 +255,7 @@ class QuestionBankController extends Controller
                 }
             }
             $correctAnswer = $request->correct_answer_mc;
-        } else {
+        } elseif ($request->type === 'essay') {
             $rawBlanks = array_map('trim', preg_split('/[|;]/', $request->correct_answer_essay));
             $parsedAnswers = [];
             foreach ($rawBlanks as $blank) {
@@ -234,6 +267,52 @@ class QuestionBankController extends Controller
                 }
             }
             $correctAnswer = json_encode($parsedAnswers);
+        } elseif ($request->type === 'sorting') {
+            $cleanSentence = trim(preg_replace('/\s+/', ' ', $request->correct_answer_sorting));
+            $correctAnswer = $cleanSentence;
+            $words = explode(' ', $cleanSentence);
+            $shuffledWords = $words;
+            shuffle($shuffledWords);
+            $options = $shuffledWords;
+        } elseif ($request->type === 'grouping') {
+            $rawGroups = array_map('trim', explode('|', $request->correct_answer_grouping));
+            $parsedGroupAnswers = [];
+            $allWords = [];
+            $categories = [];
+
+            foreach ($rawGroups as $groupStr) {
+                if (str_contains($groupStr, ':')) {
+                    [$catName, $wordsStr] = array_map('trim', explode(':', $groupStr, 2));
+                    $words = array_values(array_filter(array_map('trim', explode(',', $wordsStr))));
+                    $parsedGroupAnswers[$catName] = $words;
+                    $categories[] = $catName;
+                    $allWords = array_merge($allWords, $words);
+                }
+            }
+
+            shuffle($allWords);
+            $options = ['categories' => $categories, 'words' => $allWords];
+            $correctAnswer = json_encode($parsedGroupAnswers);
+        } elseif ($request->type === 'labeling') {
+            $rawLabels = array_map('trim', explode('|', $request->correct_answer_labeling));
+            $parsedLabels = [];
+            $labelList = [];
+
+            foreach ($rawLabels as $lblStr) {
+                if (str_contains($lblStr, ':')) {
+                    [$name, $coordStr] = array_map('trim', explode(':', $lblStr, 2));
+                    $coords = array_map('floatval', array_map('trim', explode(',', $coordStr)));
+                    $parsedLabels[$name] = [
+                        'x' => $coords[0] ?? 50,
+                        'y' => $coords[1] ?? 50
+                    ];
+                    $labelList[] = $name;
+                }
+            }
+
+            shuffle($labelList);
+            $options = $labelList;
+            $correctAnswer = json_encode($parsedLabels);
         }
 
         $question->update([
@@ -251,233 +330,242 @@ class QuestionBankController extends Controller
 
     public function destroyBankQuestion(BankQuestion $question)
     {
-        // if ($question->image && Storage::disk('public')->exists($question->image)) {
-        //     Storage::disk('public')->delete($question->image);
-        // }
-
-        // if ($question->audio && Storage::disk('public')->exists($question->audio)) {
-        //     Storage::disk('public')->delete($question->audio);
-        // }
-
         $question->delete();
-
         return redirect()->back()->with('success', 'Soal berhasil dihapus dari Bank Soal!');
     }
 
-
-// ===================================================
-// FUNGSI IMPORT PAKET ZIP (EXCEL + FOLDER MEDIA)
-// ===================================================
-public function importZipPackage(Request $request, BankPart $part)
-{
-    $request->validate([
-        'zip_file' => 'required|file|mimes:zip|max:51200', // Max 50MB
-    ]);
-
-    $zipFile = $request->file('zip_file');
-    $zip = new ZipArchive();
-
-    if ($zip->open($zipFile->getRealPath()) !== true) {
-        return redirect()->back()->with('error', 'Gagal membuka file ZIP. Pastikan format file adalah .zip standar.');
-    }
-
-    // 1. Buat folder ekstrak sementara di storage
-    $tempDirName = 'temp_zip_' . time() . '_' . auth()->id();
-    $tempPath = storage_path('app/' . $tempDirName);
-    File::makeDirectory($tempPath, 0755, true);
-
-    // Ekstrak seluruh isi ZIP
-    $zip->extractTo($tempPath);
-    $zip->close();
-
-    // 2. Cari File Excel (.xlsx / .csv)
-    $excelFiles = File::glob($tempPath . '/*.{xlsx,xls,csv}', GLOB_BRACE);
-    if (empty($excelFiles)) {
-        $excelFiles = File::glob($tempPath . '/*/*.{xlsx,xls,csv}', GLOB_BRACE);
-    }
-
-    if (empty($excelFiles)) {
-        File::deleteDirectory($tempPath);
-        return redirect()->back()->with('error', 'File Excel (.xlsx) tidak ditemukan di dalam paket ZIP!');
-    }
-
-    $excelFilePath = $excelFiles[0];
-
-    // 3. Cari Folder 'media'
-    $mediaDirs = File::glob($tempPath . '/media', GLOB_ONLYDIR);
-    if (empty($mediaDirs)) {
-        $mediaDirs = File::glob($tempPath . '/*/media', GLOB_ONLYDIR);
-    }
-
-    $mediaMap = []; 
-    $folderMap = []; // Peta penampung ID folder galeri: [nama_subfolder => id_media_folder]
-
-    if (!empty($mediaDirs)) {
-        $mediaPath = $mediaDirs[0];
-        $allMediaFiles = File::allFiles($mediaPath);
-
-        // A. Buat Folder Utama untuk Paket ZIP ini di Galeri (agar tidak berantakan di root)
-        $bankName = $part->questionBank ? $part->questionBank->name : 'Bank Soal';
-
-        // 🌟 Format nama folder: [Nama Bank] - [Nama Part] (opsional: tambah timestamp)
-        $folderName = $bankName . ' - ' . $part->part_name . ' (' . date('d M Y, H:i') . ')';
-
-        // A. Buat Folder Utama untuk Paket ZIP ini di Galeri
-        $mainGalleryFolder = MediaFolder::create([
-            'user_id'   => auth()->id(),
-            'parent_id' => null, // Masuk ke Root Galeri
-            'name'      => $folderName
+    public function importZipPackage(Request $request, BankPart $part)
+    {
+        $request->validate([
+            'zip_file' => 'required|file|mimes:zip|max:51200',
         ]);
 
-        foreach ($allMediaFiles as $mFile) {
-            $fileName = $mFile->getFilename();
-            $ext = strtolower($mFile->getExtension());
+        $zipFile = $request->file('zip_file');
+        $zip = new ZipArchive();
 
-            // Deteksi jenis file (Audio vs Gambar)
-            $isAudio = in_array($ext, ['mp3', 'wav', 'ogg', 'm4a', 'opus', 'aac']);
-            $type = $isAudio ? 'audio' : 'image';
-            $targetFolder = $isAudio ? 'audios' : 'images';
+        if ($zip->open($zipFile->getRealPath()) !== true) {
+            return redirect()->back()->with('error', 'Gagal membuka file ZIP. Pastikan format file adalah .zip standar.');
+        }
 
-            // 🌟 DETEKSI APAKAH FILE BERADA DI DALAM SUB-FOLDER (misal: media/khususgambar/gambar.jpeg)
-            $relativePath = $mFile->getRelativePath(); // Mengambil struktur folder relatif di dalam 'media/'
-            $targetFolderId = $mainGalleryFolder->id;
+        $tempDirName = 'temp_zip_' . time() . '_' . auth()->id();
+        $tempPath = storage_path('app/' . $tempDirName);
+        File::makeDirectory($tempPath, 0755, true);
 
-            if (!empty($relativePath)) {
-                $subFolderName = trim($relativePath, '/\\');
-                
-                // Jika sub-folder galeri ini belum pernah dibuat, buatkan baru!
-                if (!isset($folderMap[$subFolderName])) {
-                    $newSubFolder = MediaFolder::create([
-                        'user_id' => auth()->id(),
-                        'parent_id' => $mainGalleryFolder->id,
-                        'name' => $subFolderName
-                    ]);
-                    $folderMap[$subFolderName] = $newSubFolder->id;
-                }
-                
-                $targetFolderId = $folderMap[$subFolderName];
-            }
+        $zip->extractTo($tempPath);
+        $zip->close();
 
-            // Pindahkan berkas dari temp ke Storage Public
-            $storagePath = "media/{$targetFolder}/" . time() . '_' . $fileName;
-            Storage::disk('public')->put($storagePath, File::get($mFile->getRealPath()));
+        $excelFiles = File::glob($tempPath . '/*.{xlsx,xls,csv}', GLOB_BRACE);
+        if (empty($excelFiles)) {
+            $excelFiles = File::glob($tempPath . '/*/*.{xlsx,xls,csv}', GLOB_BRACE);
+        }
 
-            // Simpan record ke Galeri Media Internal dengan ID FOLDER YANG SESUAI
-            MediaFile::create([
+        if (empty($excelFiles)) {
+            File::deleteDirectory($tempPath);
+            return redirect()->back()->with('error', 'File Excel (.xlsx) tidak ditemukan di dalam paket ZIP!');
+        }
+
+        $excelFilePath = $excelFiles[0];
+
+        $mediaDirs = File::glob($tempPath . '/media', GLOB_ONLYDIR);
+        if (empty($mediaDirs)) {
+            $mediaDirs = File::glob($tempPath . '/*/media', GLOB_ONLYDIR);
+        }
+
+        $mediaMap = []; 
+        $folderMap = [];
+
+        if (!empty($mediaDirs)) {
+            $mediaPath = $mediaDirs[0];
+            $allMediaFiles = File::allFiles($mediaPath);
+
+            $bankName = $part->questionBank ? $part->questionBank->name : 'Bank Soal';
+            $folderName = $bankName . ' - ' . $part->part_name . ' (' . date('d M Y, H:i') . ')';
+
+            $mainGalleryFolder = MediaFolder::create([
                 'user_id'   => auth()->id(),
-                'folder_id' => $targetFolderId, // 👈 Masuk ke Sub-folder Galeri yang sesuai struktur ZIP
-                'file_name' => $fileName,
-                'file_path' => $storagePath,
-                'file_type' => $type,
-                'file_size' => $mFile->getSize(),
+                'parent_id' => null,
+                'name'      => $folderName
             ]);
 
-            // Catat ke pemetaan nama file
-            $mediaMap[strtolower($fileName)] = $storagePath;
-        }
-    }
+            foreach ($allMediaFiles as $mFile) {
+                $fileName = $mFile->getFilename();
+                $ext = strtolower($mFile->getExtension());
 
-    // 4. Proses Pembacaan Data Excel
-    try {
-        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($excelFilePath);
-        $worksheet   = $spreadsheet->getActiveSheet();
-        $rows        = $worksheet->toArray();
+                $isAudio = in_array($ext, ['mp3', 'wav', 'ogg', 'm4a', 'opus', 'aac']);
+                $type = $isAudio ? 'audio' : 'image';
+                $targetFolder = $isAudio ? 'audios' : 'images';
 
-        $countSuccess = 0;
+                $relativePath = $mFile->getRelativePath();
+                $targetFolderId = $mainGalleryFolder->id;
 
-        // Loop data baris kuis (mulai baris ke-2 / Index 1)
-        for ($i = 1; $i < count($rows); $i++) {
-            $row = $rows[$i];
-
-            $rawSoal     = trim($row[0] ?? '');
-            $rawOptA     = trim($row[1] ?? '');
-            $rawOptB     = trim($row[2] ?? '');
-            $rawOptC     = trim($row[3] ?? '');
-            $rawOptD     = trim($row[4] ?? '');
-            $rawAnswer   = trim($row[5] ?? '');
-            $explanation = trim($row[6] ?? '');
-
-            if (empty($rawSoal) || empty($rawAnswer)) {
-                continue;
-            }
-
-            // A. Deteksi Gambar & Audio pada Teks Soal
-            $questionImage = null;
-            $questionAudio = null;
-
-            foreach ($mediaMap as $origFileName => $storagePath) {
-                if (str_contains(strtolower($rawSoal), $origFileName)) {
-                    if (str_contains($storagePath, '/audios/')) {
-                        $questionAudio = $storagePath;
-                    } else {
-                        $questionImage = $storagePath;
+                if (!empty($relativePath)) {
+                    $subFolderName = trim($relativePath, '/\\');
+                    if (!isset($folderMap[$subFolderName])) {
+                        $newSubFolder = MediaFolder::create([
+                            'user_id' => auth()->id(),
+                            'parent_id' => $mainGalleryFolder->id,
+                            'name' => $subFolderName
+                        ]);
+                        $folderMap[$subFolderName] = $newSubFolder->id;
                     }
-
-                    $rawSoal = str_ireplace(
-                        [$origFileName, '[image:'.$origFileName.']', '[audio:'.$origFileName.']'],
-                        '',
-                        $rawSoal
-                    );
-                }
-            }
-
-            // B. Deteksi Opsi A, B, C, D (Gambar vs Teks / Essay)
-            $options = [];
-            $isEssay = empty($rawOptA) || $rawOptA === '-';
-
-            if ($isEssay) {
-                $type = 'essay';
-                $rawBlanks = array_map('trim', preg_split('/[|;]/', $rawAnswer));
-                $parsedAnswers = [];
-                foreach ($rawBlanks as $blank) {
-                    if (!empty($blank)) {
-                        $aliases = array_map(function($item) {
-                            return mb_strtolower(trim($item));
-                        }, preg_split('/[\/,]/', $blank));
-                        $parsedAnswers[] = array_values(array_filter($aliases));
-                    }
-                }
-                $correctAnswer = json_encode($parsedAnswers);
-            } else {
-                $type = 'multiple_choice';
-
-                $rawOptions = ['A' => $rawOptA, 'B' => $rawOptB, 'C' => $rawOptC, 'D' => $rawOptD];
-
-                foreach ($rawOptions as $key => $val) {
-                    $valLower = strtolower($val);
-                    if (isset($mediaMap[$valLower])) {
-                        $options[$key] = $mediaMap[$valLower];
-                    } else {
-                        $options[$key] = $val;
-                    }
+                    $targetFolderId = $folderMap[$subFolderName];
                 }
 
-                $correctAnswer = strtoupper($rawAnswer);
+                $storagePath = "media/{$targetFolder}/" . time() . '_' . $fileName;
+                Storage::disk('public')->put($storagePath, File::get($mFile->getRealPath()));
+
+                MediaFile::create([
+                    'user_id'   => auth()->id(),
+                    'folder_id' => $targetFolderId,
+                    'file_name' => $fileName,
+                    'file_path' => $storagePath,
+                    'file_type' => $type,
+                    'file_size' => $mFile->getSize(),
+                ]);
+
+                $mediaMap[strtolower($fileName)] = $storagePath;
             }
-
-            // C. Simpan ke Database Soal
-            BankQuestion::create([
-                'bank_part_id'  => $part->id,
-                'type'          => $type,
-                'question_text' => trim($rawSoal),
-                'image'         => $questionImage,
-                'audio'         => $questionAudio,
-                'options'       => $options,
-                'correct_answer'=> $correctAnswer,
-                'explanation'   => !empty($explanation) ? $explanation : null,
-            ]);
-
-            $countSuccess++;
         }
 
-        // Hapus folder temporary
-        File::deleteDirectory($tempPath);
+        try {
+            $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($excelFilePath);
+            $worksheet   = $spreadsheet->getActiveSheet();
+            $rows        = $worksheet->toArray();
 
-        return redirect()->back()->with('success', "Berhasil mengimpor paket ZIP! {$countSuccess} soal & seluruh folder media otomatis dibuatkan di Galeri.");
+            $countSuccess = 0;
 
-    } catch (\Exception $e) {
-        File::deleteDirectory($tempPath);
-        return redirect()->back()->with('error', 'Gagal memproses file Excel ZIP: ' . $e->getMessage());
+            for ($i = 1; $i < count($rows); $i++) {
+                $row = $rows[$i];
+
+                $rawSoal     = trim($row[0] ?? '');
+                $rawOptA     = trim($row[1] ?? '');
+                $rawOptB     = trim($row[2] ?? '');
+                $rawOptC     = trim($row[3] ?? '');
+                $rawOptD     = trim($row[4] ?? '');
+                $rawAnswer   = trim($row[5] ?? '');
+                $explanation = trim($row[6] ?? '');
+
+                if (empty($rawSoal) || empty($rawAnswer)) {
+                    continue;
+                }
+
+                $questionImage = null;
+                $questionAudio = null;
+
+                foreach ($mediaMap as $origFileName => $storagePath) {
+                    if (str_contains(strtolower($rawSoal), $origFileName)) {
+                        if (str_contains($storagePath, '/audios/')) {
+                            $questionAudio = $storagePath;
+                        } else {
+                            $questionImage = $storagePath;
+                        }
+
+                        $rawSoal = str_ireplace(
+                            [$origFileName, '[image:'.$origFileName.']', '[audio:'.$origFileName.']'],
+                            '',
+                            $rawSoal
+                        );
+                    }
+                }
+
+                $options = [];
+                $isNonMC = empty($rawOptA) || $rawOptA === '-';
+
+                if ($isNonMC) {
+                    // Deteksi Labeling vs Grouping vs Sorting vs Essay
+                    if (preg_match('/:\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?/', $rawAnswer)) {
+                        $type = 'labeling';
+                        $rawLabels = array_map('trim', explode('|', $rawAnswer));
+                        $parsedLabels = [];
+                        $labelList = [];
+                        foreach ($rawLabels as $lblStr) {
+                            if (str_contains($lblStr, ':')) {
+                                [$name, $coordStr] = array_map('trim', explode(':', $lblStr, 2));
+                                $coords = array_map('floatval', array_map('trim', explode(',', $coordStr)));
+                                $parsedLabels[$name] = ['x' => $coords[0] ?? 50, 'y' => $coords[1] ?? 50];
+                                $labelList[] = $name;
+                            }
+                        }
+                        shuffle($labelList);
+                        $options = $labelList;
+                        $correctAnswer = json_encode($parsedLabels);
+
+                    } elseif (str_contains($rawAnswer, ':') && str_contains($rawAnswer, ',')) {
+                        $type = 'grouping';
+                        $rawGroups = array_map('trim', explode('|', $rawAnswer));
+                        $parsedGroupAnswers = [];
+                        $allWords = [];
+                        $categories = [];
+                        foreach ($rawGroups as $groupStr) {
+                            if (str_contains($groupStr, ':')) {
+                                [$catName, $wordsStr] = array_map('trim', explode(':', $groupStr, 2));
+                                $words = array_values(array_filter(array_map('trim', explode(',', $wordsStr))));
+                                $parsedGroupAnswers[$catName] = $words;
+                                $categories[] = $catName;
+                                $allWords = array_merge($allWords, $words);
+                            }
+                        }
+                        shuffle($allWords);
+                        $options = ['categories' => $categories, 'words' => $allWords];
+                        $correctAnswer = json_encode($parsedGroupAnswers);
+
+                    } elseif (str_contains(strtolower($rawSoal), 'rearrange') || str_contains(strtolower($rawSoal), 'susun') || str_contains(strtolower($rawSoal), '[sorting]')) {
+                        $type = 'sorting';
+                        $cleanSentence = trim(preg_replace('/\s+/', ' ', str_replace(['[sorting]', '|'], ' ', $rawAnswer)));
+                        $correctAnswer = $cleanSentence;
+                        $words = explode(' ', $cleanSentence);
+                        $shuffledWords = $words;
+                        shuffle($shuffledWords);
+                        $options = $shuffledWords;
+                    } else {
+                        $type = 'essay';
+                        $rawBlanks = array_map('trim', preg_split('/[|;]/', $rawAnswer));
+                        $parsedAnswers = [];
+                        foreach ($rawBlanks as $blank) {
+                            if (!empty($blank)) {
+                                $aliases = array_map(function($item) {
+                                    return mb_strtolower(trim($item));
+                                }, preg_split('/[\/,]/', $blank));
+                                $parsedAnswers[] = array_values(array_filter($aliases));
+                            }
+                        }
+                        $correctAnswer = json_encode($parsedAnswers);
+                    }
+                } else {
+                    $type = 'multiple_choice';
+                    $rawOptions = ['A' => $rawOptA, 'B' => $rawOptB, 'C' => $rawOptC, 'D' => $rawOptD];
+                    foreach ($rawOptions as $key => $val) {
+                        $valLower = strtolower($val);
+                        if (isset($mediaMap[$valLower])) {
+                            $options[$key] = $mediaMap[$valLower];
+                        } else {
+                            $options[$key] = $val;
+                        }
+                    }
+                    $correctAnswer = strtoupper($rawAnswer);
+                }
+
+                BankQuestion::create([
+                    'bank_part_id'  => $part->id,
+                    'type'          => $type,
+                    'question_text' => trim($rawSoal),
+                    'image'         => $questionImage,
+                    'audio'         => $questionAudio,
+                    'options'       => $options,
+                    'correct_answer'=> $correctAnswer,
+                    'explanation'   => !empty($explanation) ? $explanation : null,
+                ]);
+
+                $countSuccess++;
+            }
+
+            File::deleteDirectory($tempPath);
+
+            return redirect()->back()->with('success', "Berhasil mengimpor paket ZIP! {$countSuccess} soal & seluruh folder media otomatis dibuatkan di Galeri.");
+
+        } catch (\Exception $e) {
+            File::deleteDirectory($tempPath);
+            return redirect()->back()->with('error', 'Gagal memproses file Excel ZIP: ' . $e->getMessage());
+        }
     }
-}
 }

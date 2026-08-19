@@ -9,6 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <!-- 🌟 LIBRARY DRAG & DROP SORTABLEJS -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
     <style>
         body { font-family: 'Poppins', sans-serif; }
         @keyframes popInModal { to { transform: scale(1); opacity: 1; } }
@@ -18,6 +22,47 @@
         .animate-pop-in { animation: popInModal 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         .shake { animation: shake 0.4s ease-in-out; }
+
+        /* Gaya Khusus Pointer Tag Panah Marlins */
+        .marlins-pointer {
+            position: absolute;
+            z-index: 30;
+            display: inline-flex;
+            align-items: center;
+            background-color: #0084ad;
+            color: white;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 9999px 0 0 9999px;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.2s;
+        }
+        .marlins-pointer:after {
+            content: '';
+            position: absolute;
+            right: -10px;
+            top: 0;
+            width: 0;
+            height: 0;
+            border-top: 13px solid transparent;
+            border-bottom: 13px solid transparent;
+            border-left: 10px solid #0084ad;
+        }
+        .marlins-pointer.correct {
+            background-color: #059669;
+        }
+        .marlins-pointer.correct:after {
+            border-left-color: #059669;
+        }
+        .marlins-pointer.wrong {
+            background-color: #dc2626;
+        }
+        .marlins-pointer.wrong:after {
+            border-left-color: #dc2626;
+        }
     </style>
   </head>
   <body class="bg-gray-100 text-gray-800 flex justify-center items-center min-h-screen overflow-y-auto py-6">
@@ -33,7 +78,7 @@
                 <span>💡</span> <span>Materi & Pembahasan:</span>
             </div>
             <div class="w-full text-gray-600 break-words" id="modal-explanation">
-                </div>
+            </div>
         </div>
         
         <div class="flex flex-col sm:flex-row gap-2.5 mt-3 w-full">
@@ -61,7 +106,7 @@
         </div>
 
         <div id="completion-review-list" class="hidden max-h-[280px] overflow-y-auto space-y-4 pr-1 mb-3 border-y border-gray-100 py-3">
-            </div>
+        </div>
 
         <div class="flex flex-row gap-2 w-full shrink-0 mt-1">
             <button id="btn-toggle-review" class="w-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-2 rounded-xl shadow-sm transition duration-150 cursor-pointer text-[11px] md:text-xs text-center flex items-center justify-center space-x-1" onclick="toggleFullReviewList(this)">
@@ -76,7 +121,7 @@
       </div>
     </div>
 
-    <div id="app" class="bg-white w-[90%] max-w-[500px] p-6 md:p-8 rounded-2xl shadow-xl relative z-20 m-auto transition-all duration-300">
+    <div id="app" class="bg-white w-[90%] max-w-[650px] p-6 md:p-8 rounded-2xl shadow-xl relative z-20 m-auto transition-all duration-300">
       
       <div id="start-screen" class="screen hidden flex-col items-center text-center animate-fade-in">
         <h1 class="text-xl md:text-2xl font-bold text-indigo-600 mb-2">{{ $quiz->title }}</h1>
@@ -205,9 +250,8 @@
           }
       }
 
-      // 🧠 FUNSI PEMBANTU UTAMA: Cek Apakah Opsi Berupa Gambar
       function isOptionImage(val) {
-          if (!val) return false;
+          if (!val || typeof val !== 'string') return false;
           return val.match(/\.(jpeg|jpg|gif|png|webp)$/i) || 
                  val.startsWith('options/') || 
                  val.startsWith('media/') || 
@@ -215,7 +259,6 @@
                  val.startsWith('bank/');
       }
 
-      // 🎨 RENDER ISI TOMBOL OPSI (TEKS / GAMBAR)
       function getOptionContentHtml(key, val, textClass = "text-indigo-600") {
           if (isOptionImage(val)) {
               return `
@@ -250,7 +293,8 @@
         optionsContainer.innerHTML = "";
         mediaContainer.innerHTML = ""; 
 
-        if (q.image) {
+        // Gambar utama ditampilkan di mediaContainer kecuali pada mode Labeling (di-render khusus di canvas interaktif)
+        if (q.image && q.type !== 'labeling') {
           const img = document.createElement("img");
           img.src = `/storage/${q.image}`; 
           img.className = "w-full max-h-[180px] object-contain rounded-xl mb-3 shadow-sm border border-gray-100 animate-fade-in";
@@ -264,6 +308,9 @@
           mediaContainer.appendChild(audioPlayer);
         }
 
+        // ==========================================
+        // 1. TIPE ESSAY
+        // ==========================================
         if (q.type === 'essay') {
             let parts = q.question_text.split('[blank]');
             let htmlText = '';
@@ -290,6 +337,190 @@
             });
             if(inputs.length > 0) inputs[0].focus();
 
+        // ==========================================
+        // 2. TIPE SORTING
+        // ==========================================
+        } else if (q.type === 'sorting') {
+            questionTextContainer.innerText = q.question_text || "Rearrange the words to make a correct sentence.";
+
+            let words = [];
+            if (Array.isArray(q.options) && q.options.length > 0) {
+                words = q.options;
+            } else if (typeof q.options === 'object' && q.options !== null) {
+                words = Object.values(q.options).filter(w => w && w !== '-');
+            } else {
+                words = (q.correct_answer || "").split(' ').sort(() => Math.random() - 0.5);
+            }
+
+            const sortContainer = document.createElement("div");
+            sortContainer.id = "sorting-box";
+            sortContainer.className = "flex flex-wrap items-center justify-center gap-2.5 p-4 bg-gray-50/80 border-2 border-dashed border-gray-200 rounded-2xl min-h-[100px] select-none my-2";
+
+            words.forEach((word) => {
+                const item = document.createElement("div");
+                item.setAttribute("data-word", word.trim());
+                item.className = "sortable-item bg-[#243746] hover:bg-[#1a2936] text-white px-4 py-2 rounded-full font-bold text-xs md:text-sm shadow-md cursor-grab active:cursor-grabbing transition-transform transform active:scale-95 border border-white/20";
+                item.innerText = word.trim();
+                sortContainer.appendChild(item);
+            });
+
+            optionsContainer.appendChild(sortContainer);
+
+            new Sortable(sortContainer, {
+                animation: 200,
+                ghostClass: 'opacity-40',
+                chosenClass: 'scale-105'
+            });
+
+            const btnConfirm = document.createElement("button");
+            btnConfirm.className = "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 cursor-pointer mt-4 text-sm";
+            btnConfirm.innerHTML = "Kunci Susunan Kalimat 🚀";
+            btnConfirm.onclick = () => submitSortingAnswer();
+            optionsContainer.appendChild(btnConfirm);
+
+        // ==========================================
+        // 3. TIPE GROUPING
+        // ==========================================
+        } else if (q.type === 'grouping') {
+            questionTextContainer.innerText = q.question_text || "Drag the words into the correct group.";
+
+            let categories = [];
+            let words = [];
+
+            if (q.options && typeof q.options === 'object') {
+                categories = q.options.categories || [];
+                words = q.options.words || [];
+            } else {
+                try {
+                    const parsed = JSON.parse(q.correct_answer);
+                    categories = Object.keys(parsed);
+                    words = Object.values(parsed).flat().sort(() => Math.random() - 0.5);
+                } catch(e) {
+                    categories = ['Category 1', 'Category 2'];
+                    words = [];
+                }
+            }
+
+            const poolWrapper = document.createElement("div");
+            poolWrapper.className = "bg-sky-500/90 p-4 rounded-2xl mb-4 shadow-sm";
+            
+            const poolContainer = document.createElement("div");
+            poolContainer.id = "grouping-pool";
+            poolContainer.className = "flex flex-wrap items-center justify-center gap-2 min-h-[50px]";
+
+            words.forEach(w => {
+                const item = document.createElement("div");
+                item.setAttribute("data-word", w.trim());
+                item.className = "grouping-item bg-white text-gray-800 px-4 py-1.5 rounded-full font-bold text-xs md:text-sm shadow-xs cursor-grab active:cursor-grabbing hover:shadow-md transition";
+                item.innerText = w.trim();
+                poolContainer.appendChild(item);
+            });
+
+            poolWrapper.appendChild(poolContainer);
+            optionsContainer.appendChild(poolWrapper);
+
+            const catGrid = document.createElement("div");
+            catGrid.className = `grid grid-cols-1 sm:grid-cols-${Math.min(categories.length, 3)} gap-3 mb-2`;
+
+            categories.forEach(cat => {
+                const catCard = document.createElement("div");
+                catCard.className = "bg-white border-2 border-[#00607d] rounded-2xl overflow-hidden shadow-xs flex flex-col";
+
+                const catHeader = document.createElement("div");
+                catHeader.className = "bg-[#00607d] text-white font-bold py-2 px-3 text-center text-xs md:text-sm capitalize tracking-wide";
+                catHeader.innerText = cat;
+                catCard.appendChild(catHeader);
+
+                const catDropzone = document.createElement("div");
+                catDropzone.setAttribute("data-category", cat);
+                catDropzone.className = "grouping-dropzone p-3 min-h-[110px] flex flex-col gap-2 bg-gray-50/50 flex-1 border-t border-dashed border-[#00607d]/30";
+                
+                catCard.appendChild(catDropzone);
+                catGrid.appendChild(catCard);
+            });
+
+            optionsContainer.appendChild(catGrid);
+
+            new Sortable(poolContainer, {
+                group: 'grouping-words',
+                animation: 200,
+                ghostClass: 'opacity-30'
+            });
+
+            document.querySelectorAll('.grouping-dropzone').forEach(dz => {
+                new Sortable(dz, {
+                    group: 'grouping-words',
+                    animation: 200,
+                    ghostClass: 'opacity-30'
+                });
+            });
+
+            const btnConfirm = document.createElement("button");
+            btnConfirm.className = "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 cursor-pointer mt-4 text-sm";
+            btnConfirm.innerHTML = "Kunci Pengelompokan 🚀";
+            btnConfirm.onclick = () => submitGroupingAnswer();
+            optionsContainer.appendChild(btnConfirm);
+
+        // ==========================================
+        // 4. 🌟 TIPE LABELING (PINPOINT IMAGE DRAG & DROP)
+        // ==========================================
+        } else if (q.type === 'labeling') {
+            questionTextContainer.innerText = q.question_text || "Drag the words to label the objects in the image.";
+
+            let labelList = [];
+            if (Array.isArray(q.options) && q.options.length > 0) {
+                labelList = q.options;
+            } else {
+                try {
+                    labelList = Object.keys(JSON.parse(q.correct_answer));
+                } catch(e) {
+                    labelList = [];
+                }
+            }
+
+            // Wrapper Layout: Pool Kiri + Canvas Gambar Kanan
+            const labelWrapper = document.createElement("div");
+            labelWrapper.className = "flex flex-col md:flex-row gap-4 items-start w-full my-2";
+
+            // Sisi Kiri: Pool Kapsul Panah
+            const labelPool = document.createElement("div");
+            labelPool.id = "labeling-pool";
+            labelPool.className = "w-full md:w-44 flex flex-wrap md:flex-col gap-2.5 p-3 bg-gray-50 border border-gray-200 rounded-2xl min-h-[80px]";
+
+            labelList.forEach(lbl => {
+                const tag = document.createElement("div");
+                tag.className = "marlins-pointer";
+                tag.setAttribute("data-label", lbl);
+                tag.innerText = lbl;
+                labelPool.appendChild(tag);
+            });
+
+            // Sisi Kanan: Area Canvas Gambar
+            const imageCanvas = document.createElement("div");
+            imageCanvas.id = "labeling-canvas";
+            imageCanvas.className = "relative flex-1 w-full rounded-2xl overflow-hidden border-2 border-gray-300 shadow-sm bg-black select-none";
+
+            const mainImg = document.createElement("img");
+            mainImg.src = `/storage/${q.image}`;
+            mainImg.className = "w-full h-auto object-contain block pointer-events-none";
+            imageCanvas.appendChild(mainImg);
+
+            labelWrapper.appendChild(labelPool);
+            labelWrapper.appendChild(imageCanvas);
+            optionsContainer.appendChild(labelWrapper);
+
+            // Inisialisasi Absolute Free Dragging pada Canvas
+            setupFreeDragPointers(imageCanvas, labelPool);
+
+            const btnConfirm = document.createElement("button");
+            btnConfirm.className = "w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl shadow-md transition duration-200 cursor-pointer mt-4 text-sm";
+            btnConfirm.innerHTML = "Kunci Posisi Label 🚀";
+            btnConfirm.onclick = () => submitLabelingAnswer();
+            optionsContainer.appendChild(btnConfirm);
+
+        // ==========================================
+        // 5. TIPE PILIHAN GANDA (MULTIPLE CHOICE)
+        // ==========================================
         } else {
             questionTextContainer.innerText = q.question_text;
             Object.keys(q.options).forEach((key) => {
@@ -301,6 +532,69 @@
               optionsContainer.appendChild(btn);
             });
         }
+      }
+
+      // 🛠️ DRAG ENGINE UNTUK POINTER LABEL BEBAS DI CANVAS
+      function setupFreeDragPointers(canvas, pool) {
+          const pointers = document.querySelectorAll(".marlins-pointer");
+
+          pointers.forEach(el => {
+              let isDragging = false;
+              let startX, startY;
+
+              const onStart = (e) => {
+                  if (isAnswering) return;
+                  isDragging = true;
+                  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                  
+                  const rect = el.getBoundingClientRect();
+                  startX = clientX - rect.left;
+                  startY = clientY - rect.top;
+
+                  if (el.parentElement !== canvas) {
+                      canvas.appendChild(el);
+                  }
+                  el.style.position = 'absolute';
+                  el.style.zIndex = 1000;
+                  document.addEventListener(e.touches ? 'touchmove' : 'mousemove', onMove);
+                  document.addEventListener(e.touches ? 'touchend' : 'mouseup', onEnd);
+              };
+
+              const onMove = (e) => {
+                  if (!isDragging) return;
+                  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                  const canvasRect = canvas.getBoundingClientRect();
+
+                  let posX = clientX - canvasRect.left - startX;
+                  let posY = clientY - canvasRect.top - startY;
+
+                  // Batasi gerakan di dalam batas gambar
+                  posX = Math.max(0, Math.min(posX, canvasRect.width - el.offsetWidth));
+                  posY = Math.max(0, Math.min(posY, canvasRect.height - el.offsetHeight));
+
+                  const pctX = (posX / canvasRect.width) * 100;
+                  const pctY = (posY / canvasRect.height) * 100;
+
+                  el.style.left = `${pctX}%`;
+                  el.style.top = `${pctY}%`;
+                  el.setAttribute('data-pct-x', (pctX + (el.offsetWidth / canvasRect.width * 100)).toFixed(1)); // Ujung panah di sisi kanan
+                  el.setAttribute('data-pct-y', (pctY + (el.offsetHeight / 2 / canvasRect.height * 100)).toFixed(1));
+              };
+
+              const onEnd = () => {
+                  isDragging = false;
+                  el.style.zIndex = 30;
+                  document.removeEventListener('mousemove', onMove);
+                  document.removeEventListener('mouseup', onEnd);
+                  document.removeEventListener('touchmove', onMove);
+                  document.removeEventListener('touchend', onEnd);
+              };
+
+              el.addEventListener('mousedown', onStart);
+              el.addEventListener('touchstart', onStart, { passive: true });
+          });
       }
 
       function selectAnswer(selectedKey, btnElement) {
@@ -363,7 +657,6 @@
               userAnswers.push(input.value.trim());
 
               let validAliases = correctAnswersGroup[index] || [];
-
               let isMatch = Array.isArray(validAliases) && validAliases.includes(uAns);
 
               if (isMatch) {
@@ -386,6 +679,166 @@
 
           let allCorrect = (correctBlanks === totalBlanks && totalBlanks > 0);
           let partialCorrect = (correctBlanks > 0 && correctBlanks < totalBlanks);
+
+          if (allCorrect || partialCorrect) {
+              playCorrectSound();
+          } else {
+              playWrongSound();
+          }
+
+          let status = allCorrect ? 'correct' : (partialCorrect ? 'partial' : 'wrong');
+          setTimeout(() => { showModal(status, q); }, 800);
+      }
+
+      function submitSortingAnswer() {
+          if (isAnswering) return;
+          isAnswering = true;
+
+          const q = quizData[currentQuestionIndex];
+          const items = document.querySelectorAll("#sorting-box .sortable-item");
+          
+          let userArr = [];
+          items.forEach(el => userArr.push(el.getAttribute("data-word")));
+          
+          const userSentence = userArr.join(" ").trim().replace(/\s+/g, ' ').toLowerCase();
+          const targetSentence = (q.correct_answer || "").trim().replace(/\s+/g, ' ').toLowerCase();
+
+          const isCorrect = (userSentence === targetSentence);
+          pesertaAnswers[q.id] = userArr.join(" ");
+
+          if (isCorrect) {
+              totalEarnedScore += (100 / quizData.length);
+              items.forEach(el => {
+                  el.classList.remove("bg-[#243746]");
+                  el.classList.add("bg-emerald-600");
+              });
+              playCorrectSound();
+          } else {
+              items.forEach(el => {
+                  el.classList.remove("bg-[#243746]");
+                  el.classList.add("bg-red-500");
+              });
+              playWrongSound();
+          }
+
+          setTimeout(() => {
+              showModal(isCorrect ? 'correct' : 'wrong', q);
+          }, 800);
+      }
+
+      function submitGroupingAnswer() {
+          if (isAnswering) return;
+          isAnswering = true;
+
+          const q = quizData[currentQuestionIndex];
+          const dropzones = document.querySelectorAll(".grouping-dropzone");
+          
+          let userGrouping = {};
+          let targetGrouping = {};
+          try {
+              targetGrouping = JSON.parse(q.correct_answer);
+          } catch(e) {
+              targetGrouping = {};
+          }
+
+          let totalWords = 0;
+          let correctWordsCount = 0;
+
+          dropzones.forEach(dz => {
+              const catName = dz.getAttribute("data-category");
+              const items = dz.querySelectorAll(".grouping-item");
+              let wordsInThisCat = [];
+
+              items.forEach(item => {
+                  wordsInThisCat.push(item.getAttribute("data-word").trim().toLowerCase());
+              });
+
+              userGrouping[catName] = wordsInThisCat;
+
+              const targetWords = (targetGrouping[catName] || []).map(w => w.toLowerCase());
+              totalWords += targetWords.length;
+
+              items.forEach(item => {
+                  const w = item.getAttribute("data-word").trim().toLowerCase();
+                  if (targetWords.includes(w)) {
+                      correctWordsCount++;
+                      item.classList.add("bg-emerald-100", "text-emerald-800", "border-emerald-300");
+                  } else {
+                      item.classList.add("bg-red-100", "text-red-800", "border-red-300");
+                  }
+              });
+          });
+
+          pesertaAnswers[q.id] = JSON.stringify(userGrouping);
+
+          let pointsPerQuestion = 100 / quizData.length;
+          if (totalWords > 0) {
+              totalEarnedScore += (correctWordsCount / totalWords) * pointsPerQuestion;
+          }
+
+          let allCorrect = (correctWordsCount === totalWords && totalWords > 0);
+          let partialCorrect = (correctWordsCount > 0 && correctWordsCount < totalWords);
+
+          if (allCorrect || partialCorrect) {
+              playCorrectSound();
+          } else {
+              playWrongSound();
+          }
+
+          let status = allCorrect ? 'correct' : (partialCorrect ? 'partial' : 'wrong');
+          setTimeout(() => { showModal(status, q); }, 800);
+      }
+
+      function submitLabelingAnswer() {
+          if (isAnswering) return;
+          isAnswering = true;
+
+          const q = quizData[currentQuestionIndex];
+          const canvas = document.getElementById("labeling-canvas");
+          const pointers = canvas.querySelectorAll(".marlins-pointer");
+
+          let targetMap = {};
+          try {
+              targetMap = JSON.parse(q.correct_answer);
+          } catch(e) {
+              targetMap = {};
+          }
+
+          let userResults = {};
+          let totalLabels = Object.keys(targetMap).length;
+          let correctCount = 0;
+          const TOLERANCE_RADIUS = 14; // Toleransi radius 14% dari titik target
+
+          pointers.forEach(el => {
+              const labelName = el.getAttribute("data-label");
+              const userX = parseFloat(el.getAttribute("data-pct-x")) || 0;
+              const userY = parseFloat(el.getAttribute("data-pct-y")) || 0;
+
+              userResults[labelName] = { x: userX, y: userY };
+
+              if (targetMap[labelName]) {
+                  const targetX = targetMap[labelName].x;
+                  const targetY = targetMap[labelName].y;
+                  const distance = Math.sqrt(Math.pow(userX - targetX, 2) + Math.pow(userY - targetY, 2));
+
+                  if (distance <= TOLERANCE_RADIUS) {
+                      correctCount++;
+                      el.classList.add("correct");
+                  } else {
+                      el.classList.add("wrong");
+                  }
+              }
+          });
+
+          pesertaAnswers[q.id] = JSON.stringify(userResults);
+
+          let pointsPerQuestion = 100 / quizData.length;
+          if (totalLabels > 0) {
+              totalEarnedScore += (correctCount / totalLabels) * pointsPerQuestion;
+          }
+
+          let allCorrect = (correctCount === totalLabels && totalLabels > 0);
+          let partialCorrect = (correctCount > 0 && correctCount < totalLabels);
 
           if (allCorrect || partialCorrect) {
               playCorrectSound();
@@ -595,6 +1048,134 @@
                       badgeClass = 'bg-red-50 text-red-700 border border-red-200';
                   }
               } 
+              else if (q.type === 'sorting') {
+                  const userSentence = (chosen || "").trim().replace(/\s+/g, ' ').toLowerCase();
+                  const targetSentence = (q.correct_answer || "").trim().replace(/\s+/g, ' ').toLowerCase();
+                  const isCorrect = (userSentence === targetSentence);
+
+                  if (isCorrect) {
+                      badgeLabel = '✓ Benar';
+                      badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+                  } else {
+                      badgeLabel = '✗ Salah';
+                      badgeClass = 'bg-red-50 text-red-700 border border-red-200';
+                  }
+
+                  const kunciHtml = !isCorrect 
+                      ? `<p class="text-emerald-700 font-semibold mt-1"><strong>Kunci Jawaban:</strong> ${q.correct_answer}</p>` 
+                      : '';
+
+                  optionsHtml = `
+                      <div class="p-2.5 bg-white border border-gray-100 rounded-lg space-y-1.5 text-[11px]">
+                          <p class="text-gray-600"><strong>Jawaban Kamu:</strong> <span class="${isCorrect ? 'text-emerald-600 font-bold' : 'text-red-600 line-through'}">${chosen || 'Belum diisi'}</span></p>
+                          ${kunciHtml}
+                      </div>
+                  `;
+              }
+              else if (q.type === 'grouping') {
+                  let userG = {};
+                  let targetG = {};
+                  try { userG = JSON.parse(chosen); } catch(e) { userG = {}; }
+                  try { targetG = JSON.parse(q.correct_answer); } catch(e) { targetG = {}; }
+
+                  let totalWords = 0;
+                  let correctWordsCount = 0;
+
+                  let groupDetailsHtml = '<div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1.5">';
+                  
+                  Object.keys(targetG).forEach(cat => {
+                      const tWords = (targetG[cat] || []).map(w => w.toLowerCase());
+                      const uWords = (userG[cat] || []).map(w => w.toLowerCase());
+                      totalWords += tWords.length;
+
+                      let wordsBadges = '';
+                      uWords.forEach(uw => {
+                          if (tWords.includes(uw)) {
+                              correctWordsCount++;
+                              wordsBadges += `<span class="bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded text-[10px] font-bold">✓ ${uw}</span>`;
+                          } else {
+                              wordsBadges += `<span class="bg-red-100 text-red-800 px-1.5 py-0.5 rounded text-[10px] font-bold line-through">✗ ${uw}</span>`;
+                          }
+                      });
+
+                      if (uWords.length === 0) {
+                          wordsBadges = '<span class="text-gray-400 italic text-[10px]">Kosong</span>';
+                      }
+
+                      groupDetailsHtml += `
+                          <div class="bg-gray-50 p-2 rounded-lg border border-gray-200">
+                              <span class="font-bold text-gray-700 block uppercase text-[10px] mb-1 pb-0.5 border-b border-gray-200">${cat}</span>
+                              <div class="flex flex-wrap gap-1">${wordsBadges}</div>
+                              <p class="text-[9px] text-gray-400 mt-1.5">Kunci: ${targetG[cat].join(', ')}</p>
+                          </div>
+                      `;
+                  });
+                  groupDetailsHtml += '</div>';
+
+                  if (correctWordsCount === totalWords && totalWords > 0) {
+                      badgeLabel = '✓ Benar';
+                      badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+                  } else if (correctWordsCount > 0) {
+                      badgeLabel = '◐ Sebagian';
+                      badgeClass = 'bg-amber-50 text-amber-700 border border-amber-200';
+                  } else {
+                      badgeLabel = '✗ Salah';
+                      badgeClass = 'bg-red-50 text-red-700 border border-red-200';
+                  }
+
+                  optionsHtml = `
+                      <div class="p-2.5 bg-white border border-gray-100 rounded-lg space-y-1 text-[11px]">
+                          <p class="text-gray-600 font-semibold">Hasil Pengelompokan Kategori:</p>
+                          ${groupDetailsHtml}
+                      </div>
+                  `;
+              }
+              else if (q.type === 'labeling') {
+                  let userL = {};
+                  let targetL = {};
+                  try { userL = JSON.parse(chosen); } catch(e) { userL = {}; }
+                  try { targetL = JSON.parse(q.correct_answer); } catch(e) { targetL = {}; }
+
+                  let totalL = Object.keys(targetL).length;
+                  let correctLCount = 0;
+
+                  let labelBadges = '';
+                  Object.keys(targetL).forEach(lbl => {
+                      const uCoord = userL[lbl];
+                      const tCoord = targetL[lbl];
+                      let isOk = false;
+
+                      if (uCoord) {
+                          const dist = Math.sqrt(Math.pow(uCoord.x - tCoord.x, 2) + Math.pow(uCoord.y - tCoord.y, 2));
+                          if (dist <= 14) {
+                              isOk = true;
+                              correctLCount++;
+                          }
+                      }
+
+                      labelBadges += isOk
+                          ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-bold">✓ ${lbl}</span>`
+                          : `<span class="bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-[10px] font-bold line-through">✗ ${lbl}</span>`;
+                  });
+
+                  if (correctLCount === totalL && totalL > 0) {
+                      badgeLabel = '✓ Benar';
+                      badgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+                  } else if (correctLCount > 0) {
+                      badgeLabel = '◐ Sebagian';
+                      badgeClass = 'bg-amber-50 text-amber-700 border border-amber-200';
+                  } else {
+                      badgeLabel = '✗ Salah';
+                      badgeClass = 'bg-red-50 text-red-700 border border-red-200';
+                  }
+
+                  optionsHtml = `
+                      <div class="p-2.5 bg-white border border-gray-100 rounded-lg space-y-1.5 text-[11px]">
+                          <p class="text-gray-600 font-semibold">Hasil Penempatan Label Titik:</p>
+                          <div class="flex flex-wrap gap-1">${labelBadges}</div>
+                      </div>
+                  `;
+              }
               else {
                   let isCorrect = (chosen === q.correct_answer);
                   if (isCorrect) {
@@ -605,7 +1186,7 @@
                       badgeClass = 'bg-red-50 text-red-700 border border-red-200';
                   }
                   
-                  Object.keys(q.options).forEach((key) => {
+                  Object.keys(q.options || {}).forEach((key) => {
                       let badgeText = '';
                       let textStyle = 'text-gray-500';
                       let optVal = q.options[key] || '';
